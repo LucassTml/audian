@@ -89,6 +89,8 @@ struct Shared {
     /// Loudest RMS block seen during the whole recording (f32 bits).
     peak: AtomicU32,
     failed: AtomicBool,
+    /// Recoverable stream problems (e.g. a few dropped samples while the PC was busy).
+    glitches: AtomicU32,
     vad: Mutex<Vad>,
 }
 
@@ -143,15 +145,26 @@ impl Recorder {
             level: AtomicU32::new(0),
             peak: AtomicU32::new(0),
             failed: AtomicBool::new(false),
+            glitches: AtomicU32::new(0),
             vad: Mutex::new(Vad::new(cfg.vad_sensitivity)),
         });
         let gain = if cfg.gain.is_finite() && cfg.gain > 0.0 { cfg.gain.min(8.0) } else { 1.0 };
         let block = (sample_rate as usize / 100).max(1); // 10 ms
 
         let err_shared = shared.clone();
-        let error_cb = move |e: cpal::Error| {
-            if !err_shared.failed.swap(true, Ordering::Relaxed) {
-                on_error(e.to_string());
+        let error_cb = move |e: cpal::Error| match e.kind() {
+            // The stream keeps running after these: a glitch (WASAPI drops a few milliseconds
+            // when the capture thread is starved, e.g. while the engines load), denied real-time
+            // priority, or an automatic reroute. Only errors that stop the stream end a dictation.
+            cpal::ErrorKind::Xrun | cpal::ErrorKind::RealtimeDenied | cpal::ErrorKind::DeviceChanged => {
+                if err_shared.glitches.fetch_add(1, Ordering::Relaxed) == 0 {
+                    log::warn!("audio stream: {e} (continuing)");
+                }
+            }
+            _ => {
+                if !err_shared.failed.swap(true, Ordering::Relaxed) {
+                    on_error(e.to_string());
+                }
             }
         };
 
@@ -189,6 +202,10 @@ impl Recorder {
     pub fn stop(self) -> Recording {
         let _ = self.stream.pause();
         drop(self.stream); // closes the device
+        let glitches = self.shared.glitches.load(Ordering::Relaxed);
+        if glitches > 0 {
+            log::info!("{glitches} audio glitch(es) during the recording");
+        }
         let samples = std::mem::take(&mut *self.shared.samples.lock().unwrap_or_else(|e| e.into_inner()));
         Recording {
             samples,
