@@ -1,0 +1,51 @@
+[package]
+name = "audian"
+description = "Voice dictation for Windows: speak, get polished text wherever you type"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "audian"
+path = "src/main.rs"
+
+[dependencies]
+audian-common.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+cpal = "0.18"
+audian-art.workspace = true
+audian-ui.workspace = true
+fontdue = "0.9"
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd"] }
+eframe = { version = "0.36", default-features = false, features = ["glow", "default_fonts"] }
+
+[dependencies.windows]
+workspace = true
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_Security",
+    "Win32_System_DataExchange",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_ProcessStatus",
+    "Win32_System_SystemInformation",
+    "Win32_System_JobObjects",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Ole",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[build-dependencies]
+audian-build.workspace = true

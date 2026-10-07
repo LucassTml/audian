@@ -1,0 +1,10 @@
+[package]
+name = "audian-build"
+description = "Build-script support: embeds icon, manifest and version info into Audian executables"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+audian-art.workspace = true
+embed-resource = "3"

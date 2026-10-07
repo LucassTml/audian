@@ -1,0 +1,9 @@
+[package]
+name = "audian-art"
+description = "Vector artwork (logo, tray glyphs) for Audian, rendered at any size"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }

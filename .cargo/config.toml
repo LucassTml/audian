@@ -1,0 +1,11 @@
+[env]
+# With MSVC, ggml's GGML_NATIVE=ON fails to detect CPU features and silently builds without
+# any SIMD (whisper ran ~20x slower). OFF selects the portable AVX/AVX2/FMA/F16C baseline,
+# which every x86-64 CPU from roughly 2015 onward supports.
+GGML_NATIVE = "OFF"
+
+# whisper-rs-sys forwards CMAKE_* variables to CMake. Without these, the cmake crate's MSVC
+# release flags contain no optimisation level at all, and whisper.cpp ran ~25x slower.
+# (llama-cpp-sys-2 already sets the same flags itself.)
+CMAKE_C_FLAGS_RELEASE = "/O2 /Ob2 /DNDEBUG"
+CMAKE_CXX_FLAGS_RELEASE = "/O2 /Ob2 /DNDEBUG"

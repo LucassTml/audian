@@ -1,0 +1,38 @@
+[workspace]
+resolver = "3"
+members = ["crates/audian-common", "crates/audian-art", "crates/audian-build", "crates/audian-ui", "crates/audian", "crates/audian-stt", "crates/audian-llm", "crates/audian-setup"]
+# The installer embeds the other binaries, so it is built separately (scripts/package.ps1).
+default-members = ["crates/audian-common", "crates/audian-art", "crates/audian-build", "crates/audian-ui", "crates/audian", "crates/audian-stt", "crates/audian-llm"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+license = "MIT"
+authors = ["Audian contributors"]
+repository = "https://github.com/LucassTml/audian"
+
+[workspace.dependencies]
+audian-common = { path = "crates/audian-common" }
+audian-art = { path = "crates/audian-art" }
+audian-build = { path = "crates/audian-build" }
+audian-ui = { path = "crates/audian-ui" }
+anyhow = "1"
+thiserror = "2"
+log = { version = "0.4", features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"
+windows = "0.62"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+debug = false
+panic = "unwind"
+
+# Native inference code (whisper.cpp / llama.cpp) is slow without optimisation,
+# so optimise dependencies even in debug builds.
+[profile.dev.package."*"]
+opt-level = 3

@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Audian — User &amp; Technical Manual</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  :root {
+    --ink: #1c1b19; --dim: #5c5852; --faint: #8f8a80; --line: #e8e4dc; --bg-soft: #f7f5f0;
+    --accent: #7a6748; --accent2: #a08c68; --ok: #1f9d63; --warn: #c27a10; --code: #f4f1ea;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; color: var(--ink); font-size: 10.1pt; line-height: 1.47; margin: 0; }
+  h1 { font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-weight: 650; font-size: 22pt; margin: 0 0 4mm; letter-spacing: -0.3px; break-before: page; }
+  h1 .num { color: var(--accent); margin-right: 3mm; }
+  h2 { font-size: 13.5pt; font-weight: 650; margin: 7mm 0 2mm; color: #2a2722; break-after: avoid; }
+  h3 { font-size: 11pt; font-weight: 650; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.6mm; }
+  .lead { font-size: 11.5pt; color: var(--dim); }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin: 0.8mm 0; }
+  code, kbd, .mono { font-family: "Cascadia Mono", Consolas, monospace; font-size: 9pt; }
+  code { background: var(--code); padding: 0.3mm 1.4mm; border-radius: 1.2mm; }
+  kbd { border: 1px solid #cfc9bd; border-bottom-width: 2px; border-radius: 1.4mm; padding: 0.2mm 1.6mm; background: #fff; font-size: 8.6pt; }
+  pre { background: #1c1b19; color: #eee9df; padding: 3.5mm 4mm; border-radius: 2.5mm; font-size: 8.4pt; line-height: 1.45; white-space: pre-wrap; break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.3pt; break-inside: avoid; }
+  th { text-align: left; font-weight: 650; color: #2e2a24; background: var(--bg-soft); border-bottom: 1.5px solid #ddd5c6; padding: 1.8mm 2.2mm; }
+  td { border-bottom: 1px solid var(--line); padding: 1.3mm 2.2mm; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .callout { background: var(--bg-soft); border-left: 3px solid var(--accent); border-radius: 2mm; padding: 3mm 4mm; margin: 3mm 0 4mm; break-inside: avoid; }
+  .callout.ok { border-color: var(--ok); background: #effaf4; }
+  .callout.warn { border-color: var(--warn); background: #fdf6ea; }
+  .callout b:first-child { display: block; margin-bottom: 1mm; }
+  figure { margin: 3mm 0 5mm; break-inside: avoid; text-align: center; }
+  figure img { max-width: 100%; border-radius: 2.5mm; box-shadow: 0 1mm 4mm rgba(30, 20, 80, 0.16); }
+  figure.half img { max-width: 78%; }
+  figcaption { font-size: 8.8pt; color: var(--faint); margin-top: 2mm; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; }
+  .tile { background: var(--bg-soft); border-radius: 2.5mm; padding: 3mm 3.5mm; break-inside: avoid; }
+  .tile .big { font-size: 17pt; font-weight: 650; color: var(--accent); line-height: 1.15; }
+  .tile .cap { font-size: 8.8pt; color: var(--dim); }
+  .badge { display: inline-block; font-size: 7.8pt; font-weight: 650; padding: 0.3mm 2mm; border-radius: 3mm; background: #efe9dd; color: var(--accent); vertical-align: 1px; }
+  .badge.ok { background: #dff5ea; color: var(--ok); }
+  .badge.warn { background: #fbedd3; color: var(--warn); }
+  .muted { color: var(--faint); }
+  svg { max-width: 100%; }
+  /* Cover: a full-bleed first page */
+  @page :first { margin: 0; }
+  .cover { width: 210mm; height: 296.5mm; position: relative; overflow: hidden; color: #fff; padding: 0 24mm;
+           background: radial-gradient(circle at 18% 12%, rgba(255,244,225,0.20), rgba(255,244,225,0) 55%),
+                       linear-gradient(160deg, #34322f 0%, #1c1c1e 55%, #101012 100%);
+           display: flex; flex-direction: column; justify-content: center; break-after: page; }
+  .cover img { width: 54mm; height: 54mm; margin-left: -3mm; }
+  .cover h1 { break-before: auto; font-size: 50pt; color: #fff; margin: 4mm 0 0; letter-spacing: -1px; }
+  .cover .sub { color: #ece6da; font-size: 15pt; margin-top: 1mm; }
+  .cover .tag { color: #c9c2b4; font-size: 11.5pt; margin-top: 10mm; max-width: 120mm; line-height: 1.5; }
+  .cover .meta { position: absolute; left: 24mm; bottom: 18mm; color: #9d978b; font-size: 9.5pt; }
+  .cover svg.wave { position: absolute; right: -10mm; bottom: 40mm; width: 150mm; opacity: 0.35; }
+  .toc { columns: 2; column-gap: 10mm; font-size: 10.5pt; }
+  .toc div { margin: 1.2mm 0; break-inside: avoid; }
+  table.long { break-inside: auto; }
+  table.long tr { break-inside: avoid; }
+  .toc span { color: var(--accent); font-weight: 650; display: inline-block; width: 8mm; }
+</style>
+</head>
+<body>
+
+<!-- ============================== COVER ============================== -->
+<section class="cover">
+  <svg class="wave" viewBox="0 0 580 120" xmlns="http://www.w3.org/2000/svg"><rect x='0' y='46' width='5' height='28' rx='2.5' fill='#ffffff' opacity='0.35'/><rect x='12' y='42.8' width='5' height='34.5' rx='2.5' fill='#ffffff' opacity='0.38'/><rect x='24' y='40.3' width='5' height='39.4' rx='2.5' fill='#ffffff' opacity='0.4'/><rect x='36' y='39' width='5' height='41.9' rx='2.5' fill='#ffffff' opacity='0.41'/><rect x='48' y='38.9' width='5' height='42.2' rx='2.5' fill='#ffffff' opacity='0.41'/><rect x='60' y='39.6' width='5' height='40.9' rx='2.5' fill='#ffffff' opacity='0.41'/><rect x='72' y='40.2' width='5' height='39.6' rx='2.5' fill='#ffffff' opacity='0.4'/><rect x='84' y='40.2' width='5' height='39.7' rx='2.5' fill='#ffffff' opacity='0.4'/><rect x='96' y='38.7' width='5' height='42.6' rx='2.5' fill='#ffffff' opacity='0.42'/><rect x='108' y='35.6' width='5' height='48.9' rx='2.5' fill='#ffffff' opacity='0.45'/><rect x='120' y='30.8' width='5' height='58.4' rx='2.5' fill='#ffffff' opacity='0.49'/><rect x='132' y='25' width='5' height='69.9' rx='2.5' fill='#ffffff' opacity='0.54'/><rect x='144' y='19.3' width='5' height='81.4' rx='2.5' fill='#ffffff' opacity='0.59'/><rect x='156' y='14.8' width='5' height='90.4' rx='2.5' fill='#ffffff' opacity='0.63'/><rect x='168' y='12.6' width='5' height='94.8' rx='2.5' fill='#ffffff' opacity='0.65'/><rect x='180' y='13.5' width='5' height='93.1' rx='2.5' fill='#ffffff' opacity='0.65'/><rect x='192' y='17.5' width='5' height='85' rx='2.5' fill='#ffffff' opacity='0.61'/><rect x='204' y='24.4' width='5' height='71.3' rx='2.5' fill='#ffffff' opacity='0.55'/><rect x='216' y='33' width='5' height='54.1' rx='2.5' fill='#ffffff' opacity='0.47'/><rect x='228' y='41.8' width='5' height='36.5' rx='2.5' fill='#ffffff' opacity='0.39'/><rect x='240' y='49.3' width='5' height='21.4' rx='2.5' fill='#ffffff' opacity='0.32'/><rect x='252' y='54.3' width='5' height='11.4' rx='2.5' fill='#ffffff' opacity='0.27'/><rect x='264' y='55.8' width='5' height='8.4' rx='2.5' fill='#ffffff' opacity='0.26'/><rect x='276' y='53.8' width='5' height='12.4' rx='2.5' fill='#ffffff' opacity='0.28'/><rect x='288' y='48.7' width='5' height='22.6' rx='2.5' fill='#ffffff' opacity='0.33'/><rect x='300' y='41.6' width='5' height='36.8' rx='2.5' fill='#ffffff' opacity='0.39'/><rect x='312' y='34' width='5' height='52' rx='2.5' fill='#ffffff' opacity='0.46'/><rect x='324' y='27.2' width='5' height='65.5' rx='2.5' fill='#ffffff' opacity='0.52'/><rect x='336' y='22.5' width='5' height='74.9' rx='2.5' fill='#ffffff' opacity='0.56'/><rect x='348' y='20.4' width='5' height='79.2' rx='2.5' fill='#ffffff' opacity='0.58'/><rect x='360' y='21' width='5' height='78.1' rx='2.5' fill='#ffffff' opacity='0.58'/><rect x='372' y='23.5' width='5' height='73.1' rx='2.5' fill='#ffffff' opacity='0.55'/><rect x='384' y='27' width='5' height='66' rx='2.5' fill='#ffffff' opacity='0.52'/><rect x='396' y='30.5' width='5' height='59' rx='2.5' fill='#ffffff' opacity='0.49'/><rect x='408' y='32.9' width='5' height='54.2' rx='2.5' fill='#ffffff' opacity='0.47'/><rect x='420' y='33.6' width='5' height='52.8' rx='2.5' fill='#ffffff' opacity='0.46'/><rect x='432' y='32.5' width='5' height='55' rx='2.5' fill='#ffffff' opacity='0.47'/><rect x='444' y='30.1' width='5' height='59.8' rx='2.5' fill='#ffffff' opacity='0.49'/><rect x='456' y='27.2' width='5' height='65.6' rx='2.5' fill='#ffffff' opacity='0.52'/><rect x='468' y='24.8' width='5' height='70.4' rx='2.5' fill='#ffffff' opacity='0.54'/><rect x='480' y='23.8' width='5' height='72.4' rx='2.5' fill='#ffffff' opacity='0.55'/><rect x='492' y='24.8' width='5' height='70.4' rx='2.5' fill='#ffffff' opacity='0.54'/><rect x='504' y='28' width='5' height='64' rx='2.5' fill='#ffffff' opacity='0.51'/><rect x='516' y='33' width='5' height='53.9' rx='2.5' fill='#ffffff' opacity='0.47'/><rect x='528' y='39.2' width='5' height='41.7' rx='2.5' fill='#ffffff' opacity='0.41'/><rect x='540' y='45.4' width='5' height='29.3' rx='2.5' fill='#ffffff' opacity='0.36'/><rect x='552' y='50.7' width='5' height='18.6' rx='2.5' fill='#ffffff' opacity='0.31'/><rect x='564' y='54.6' width='5' height='10.9' rx='2.5' fill='#ffffff' opacity='0.27'/></svg>
+  <img src="img/logo.png" alt="Audian logo">
+  <h1>Audian</h1>
+  <div class="sub">User &amp; Technical Manual</div>
+  <div class="tag">Voice dictation for Windows — speak naturally and get polished text wherever you type. Private by default: everything runs on your PC.</div>
+  <div class="meta">Version 1.0.0 · October 2026</div>
+</section>
+
+<h1 style="break-before: page">Contents</h1>
+<div class="toc">
+  <div><span>1</span>What Audian is</div>
+  <div><span>2</span>Installing &amp; first run</div>
+  <div><span>3</span>Dictating</div>
+  <div><span>4</span>Knowing when you're done (auto-stop)</div>
+  <div><span>5</span>Rewriting modes &amp; providers</div>
+  <div><span>6</span>Per-app modes &amp; translation</div>
+  <div><span>7</span>The Audian window</div>
+  <div><span>8</span>Resource usage (measured)</div>
+  <div><span>9</span>Models: what we chose and why</div>
+  <div><span>10</span>How it works inside</div>
+  <div><span>11</span>Privacy &amp; your data</div>
+  <div><span>12</span>Troubleshooting</div>
+  <div><span>13</span>Configuration reference</div>
+  <div><span>14</span>Building &amp; publishing</div>
+</div>
+
+<!-- ============================== 1 ============================== -->
+<h1><span class="num">1</span>What Audian is</h1>
+<p class="lead">Audian is a small background utility. You press a keyboard shortcut in any app, speak the way you
+talk, and Audian inserts a clean, well-formed version of what you <i>meant</i> — not a literal transcript — at
+your text cursor.</p>
+<p>Saying <i>"um so basically I, I want to make this thing work better and like organize the code because it's
+kinda messy"</i> produces <b>"I want to make this work better and organize the code, because it's kind of messy."</b>
+in Natural mode, or <b>"Improve the implementation and organize the code to make it cleaner and more
+maintainable."</b> in AI Prompt mode.</p>
+
+<h2>The pipeline</h2>
+<svg viewBox="0 0 680 120" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="12">
+  <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#7a6748"/><stop offset="1" stop-color="#a08c68"/></linearGradient>
+  <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#8f8a80"/></marker></defs>
+  <g>
+    <rect x="4" y="30" width="112" height="56" rx="10" fill="#f7f5f0" stroke="#ddd5c6"/><text x="60" y="54" text-anchor="middle" font-weight="600">Microphone</text><text x="60" y="72" text-anchor="middle" fill="#5c5852" font-size="10.5">in memory only</text>
+    <rect x="144" y="30" width="120" height="56" rx="10" fill="#f7f5f0" stroke="#ddd5c6"/><text x="204" y="54" text-anchor="middle" font-weight="600">Voice detection</text><text x="204" y="72" text-anchor="middle" fill="#5c5852" font-size="10.5">start / pause / end</text>
+    <rect x="292" y="30" width="120" height="56" rx="10" fill="url(#g)"/><text x="352" y="54" text-anchor="middle" font-weight="600" fill="#fff">Speech → text</text><text x="352" y="72" text-anchor="middle" fill="#f3eee4" font-size="10.5">Whisper (local)</text>
+    <rect x="440" y="30" width="112" height="56" rx="10" fill="url(#g)"/><text x="496" y="54" text-anchor="middle" font-weight="600" fill="#fff">Rewrite</text><text x="496" y="72" text-anchor="middle" fill="#f3eee4" font-size="10.5">local AI · cloud · rules</text>
+    <rect x="580" y="30" width="96" height="56" rx="10" fill="#f7f5f0" stroke="#ddd5c6"/><text x="628" y="54" text-anchor="middle" font-weight="600">Insert</text><text x="628" y="72" text-anchor="middle" fill="#5c5852" font-size="10.5">at the cursor</text>
+    <line x1="118" y1="58" x2="140" y2="58" stroke="#8f8a80" stroke-width="1.6" marker-end="url(#a)"/>
+    <line x1="266" y1="58" x2="288" y2="58" stroke="#8f8a80" stroke-width="1.6" marker-end="url(#a)"/>
+    <line x1="414" y1="58" x2="436" y2="58" stroke="#8f8a80" stroke-width="1.6" marker-end="url(#a)"/>
+    <line x1="554" y1="58" x2="576" y2="58" stroke="#8f8a80" stroke-width="1.6" marker-end="url(#a)"/>
+    <text x="340" y="112" text-anchor="middle" fill="#8f8a80" font-size="10.5">Typically 0.3 – 1.5 s from the end of your speech to text on screen (CPU only)</text>
+  </g>
+</svg>
+
+<h2>Design principles</h2>
+<ul>
+  <li><b>Private by default.</b> Speech recognition and rewriting run on your CPU. Nothing is sent anywhere unless you choose the Antigravity cloud provider.</li>
+  <li><b>Invisible until needed.</b> The tray app idles at ~11 MB of RAM and 0 % CPU. The AI engines are separate processes that start when you press the shortcut and exit as soon as your text is inserted.</li>
+  <li><b>Works everywhere you type.</b> Text is pasted through the clipboard, which every Windows app understands — editors, browsers, chat apps, Office, terminals — and your clipboard is restored afterwards.</li>
+  <li><b>Yours to style.</b> Six colour themes — Ivory (off-white, the default), Violet, Ocean, Mint, Sunset and Rose — for the window, the logo and the recording indicator, which can also be dark or light.</li>
+  <li><b>Fails gracefully.</b> If the AI fails, a basic cleanup is inserted; if the window closed or is elevated, the text goes to your clipboard and a notification explains why.</li>
+</ul>
+
+<div class="grid3">
+  <div class="tile"><div class="big">11 MB</div><div class="cap">tray app RAM while idle<br>(0 % CPU)</div></div>
+  <div class="tile"><div class="big">0.3–1.5 s</div><div class="cap">end of speech → text,<br>CPU only</div></div>
+  <div class="tile"><div class="big">0 MB</div><div class="cap">GPU memory used —<br>runs on any PC</div></div>
+</div>
+
+<!-- ============================== 2 ============================== -->
+<h1><span class="num">2</span>Installing &amp; first run</h1>
+<p>Run <code>Audian-Setup-1.0.0-x64.exe</code>. It installs for your Windows account only, so no administrator
+rights are needed (the same model as VS Code's user installer). Requirements: Windows 10 or 11, 64-bit x86 CPU with
+AVX2 (any Intel/AMD CPU from roughly 2015 on), 8 GB RAM recommended (4 GB works with the lighter models).</p>
+<figure class="half"><img src="img/setup.png" alt="Audian Setup"><figcaption>The installer. Options: location, start with Windows, desktop shortcut, and downloading the AI models (about 1.5 GB) during setup.</figcaption></figure>
+
+<h2>What the installer does</h2>
+<table>
+  <tr><th>Step</th><th>Details</th></tr>
+  <tr><td>Files</td><td><code>%LOCALAPPDATA%\Programs\Audian</code>: <code>audian.exe</code> (tray app + window), <code>audian-stt.exe</code> (speech engine), <code>audian-llm.exe</code> (rewriting engine), <code>uninstall.exe</code>. About 29 MB.</td></tr>
+  <tr><td>Shortcuts</td><td>Start Menu entry “Audian”; optional desktop shortcut.</td></tr>
+  <tr><td>Registration</td><td>Listed in <i>Settings › Apps › Installed apps</i> with a working Uninstall button.</td></tr>
+  <tr><td>Startup</td><td>Optional entry in your user's <i>Run</i> key (Audian starts in the tray when you sign in).</td></tr>
+  <tr><td>Models</td><td>Optional download of Whisper Small (264 MB) and Qwen 3.5 2B (1.28 GB) into <code>%LOCALAPPDATA%\Audian\models</code>, verified by SHA-256. Resumable.</td></tr>
+  <tr><td>Updates</td><td>Running a newer installer stops Audian, replaces the files and keeps your settings, history and models.</td></tr>
+</table>
+<h3>Silent install (for scripts, winget, etc.)</h3>
+<pre>Audian-Setup.exe --quiet [--with-models] [--no-autostart] [--desktop-shortcut] [--no-launch]
+uninstall.exe --uninstall [--quiet] [--purge]      # --purge also deletes settings, history, models</pre>
+
+<h2>First run</h2>
+<p>On first launch Audian opens a short welcome: (1) download the models if they're missing, (2) pick and test your
+microphone, (3) learn the shortcut. After that it lives in the system tray.</p>
+<figure><img src="img/page_welcome.png" alt="Welcome"><figcaption>The first-run welcome.</figcaption></figure>
+
+<!-- ============================== 3 ============================== -->
+<h1><span class="num">3</span>Dictating</h1>
+<p>Click into any text field, then use your shortcut (default <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd>;
+yours is set to <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd>).</p>
+<table>
+  <tr><th>Style</th><th>How it works</th><th>Best for</th></tr>
+  <tr><td><b>Hybrid</b> (default)</td><td>Hold the shortcut while speaking and release to finish — <i>or</i> tap it once and just talk; Audian finishes when you pause (or when you tap again).</td><td>Everything</td></tr>
+  <tr><td><b>Push-to-talk</b></td><td>Records only while the shortcut is held.</td><td>Short phrases, noisy rooms</td></tr>
+  <tr><td><b>Toggle</b></td><td>Press to start; press again or pause to finish.</td><td>Long, hands-free dictation</td></tr>
+</table>
+<p><kbd>Esc</kbd> cancels a dictation at any point. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>V</kbd>
+pastes your last dictation again (configurable).</p>
+
+<h2>The recording indicator</h2>
+<p>A small pill appears near your text cursor (or at the bottom of the screen if the app doesn't expose its cursor).
+It never takes focus and clicks pass through it.</p>
+<div class="grid3">
+  <figure><img src="img/ov_recording.png" alt="Recording"><figcaption><b>Listening</b> — live waveform; label shows the mode. A ring around the dot means hands-free.</figcaption></figure>
+  <figure><img src="img/ov_countdown.png" alt="Pause"><figcaption><b>Pause detected</b> — a line in your theme's colour fills as auto-stop approaches; speaking again resets it.</figcaption></figure>
+  <figure><img src="img/ov_processing.png" alt="Done"><figcaption><b>Done</b> — word count, then the pill fades. Errors show an amber mark and a short reason.</figcaption></figure>
+</div>
+<p>While processing, the pill shows <i>Transcribing…</i> then <i>Polishing…</i>. Soft chimes mark start and stop
+(can be turned off under <i>Microphone &amp; sound</i>). Its colours, dark or light style, position and label are
+set under <i>Appearance</i>.</p>
+
+<h2>Where the text goes</h2>
+<ul>
+  <li>Audian remembers the window you were in when you pressed the shortcut, and pastes there — even if you clicked elsewhere while it was processing (it switches back first).</li>
+  <li>Your clipboard is saved before pasting and restored ~0.6 s later. Dictated text is excluded from <kbd>Win</kbd>+<kbd>V</kbd> clipboard history and cloud clipboard.</li>
+  <li>In terminals, multi-line results are joined into one line so nothing runs by accident. mintty/PuTTY receive <kbd>Shift</kbd>+<kbd>Insert</kbd>.</li>
+  <li>If the window was closed, or runs as administrator (Windows blocks input from normal apps into elevated ones), the text is placed on the clipboard and a notification tells you to press <kbd>Ctrl</kbd>+<kbd>V</kbd>.</li>
+</ul>
+
+<!-- ============================== 4 ============================== -->
+<h1><span class="num">4</span>Knowing when you're done</h1>
+<p class="lead">In hands-free dictation Audian decides when you've finished speaking — quickly when you've
+completed a sentence, patiently when you pause mid-thought.</p>
+<h2>How it decides</h2>
+<ol>
+  <li><b>Voice activity detection</b> runs on every 10 ms of audio and tracks your room's background noise, so it knows the difference between “quiet” and “speaking” on any microphone.</li>
+  <li>When you pause (≈0.5 s), Audian quietly <b>transcribes what you've said so far</b> (a “preview”).</li>
+  <li>If the preview sounds <b>finished</b> (“…send it to Maria.”), Audian stops after your <i>pause tolerance</i> (default 2.0 s).</li>
+  <li>If it sounds <b>unfinished</b> — it ends with “and”, “but”, “because”, “the”, a comma, “um”, or Portuguese “e”, “mas”, “porque”, “que”, “de”… — Audian waits the <i>extra patience</i> as well (default +1.5 s).</li>
+  <li>When it stops, the preview is <b>reused</b>, so your text usually appears 0.3–1 s later.</li>
+</ol>
+<div class="callout"><b>Tuning it</b>Shortcut &amp; recording › Finish automatically. Presets: <b>Quick</b> 1.2 s, <b>Balanced</b> 2 s, <b>Patient</b> 3 s, or any value 0.6–6 s. You can also disable smart detection (pure silence timer) or auto-stop entirely (then tap the shortcut to finish). If nothing is said for 8 s, the dictation is cancelled.</div>
+<h2>Measured behaviour (test recordings)</h2>
+<table>
+  <tr><th>What was said</th><th>Result</th></tr>
+  <tr><td>“Let's meet on Wednesday at three.” → silence</td><td>Stopped 1.5–2.0 s after the sentence; text appeared 0.98 s later (transcript reused).</td></tr>
+  <tr><td>“I think we should push the release and” → 2.2 s pause → “also update the documentation before Friday.”</td><td>Did <b>not</b> stop at the pause (sentence unfinished); captured everything; stopped 2.07 s after the end; text 0.69 s later.</td></tr>
+  <tr><td>“Send the report to Maria.” → 2.2 s pause → “Also call John.”</td><td>Stopped after the first sentence (complete + pause longer than the tolerance). Choose <i>Patient</i> if you take long breaks between sentences.</td></tr>
+</table>
+
+<!-- ============================== 5 ============================== -->
+<h1><span class="num">5</span>Rewriting modes &amp; providers</h1>
+<h2>Modes</h2>
+<table>
+  <tr><th style="width:18%">Mode</th><th style="width:30%">Purpose</th><th>Example output (from real tests)</th></tr>
+  <tr><td><b>Natural</b></td><td>Clean speech, stay close to your words.</td><td>“Let's meet on Wednesday at 3. Can you send the report to Maria before that?” (from “Let's meet on Tuesday — no, wait, Wednesday…”)</td></tr>
+  <tr><td><b>AI Prompt</b></td><td>A clear, structured instruction for an AI assistant.</td><td>“Add a settings page where users can select their microphone and choose a shortcut. Include a toggle to enable or disable Windows startup, and ensure all settings are saved to a config file and loaded on startup.”</td></tr>
+  <tr><td><b>Professional</b></td><td>Polished wording for work email/chat.</td><td>“For the new feature, please add a settings page where users can select their microphone, configure a shortcut, and toggle launching on Windows startup…”</td></tr>
+  <tr><td><b>Document</b></td><td>Prose for documents, with paragraphs.</td><td>—</td></tr>
+  <tr><td><b>Literal</b></td><td>Almost verbatim; no AI.</td><td>Whisper's transcript with recognizer artefacts removed.</td></tr>
+  <tr><td><b>Custom</b></td><td>Only your custom instructions.</td><td>e.g. “Always organize my spoken instructions into concise technical prompts.”</td></tr>
+</table>
+<p>In every mode the rewriter <b>never answers</b> what you say: “uh what's the, what's the capital of France” becomes
+“What's the capital of France?”, not “Paris”. It keeps your language (Portuguese stays Portuguese), your point of view,
+names, numbers and code identifiers.</p>
+<figure><img src="img/page_rewriting.png" alt="Rewriting page"><figcaption>Rewriting: default mode, AI provider and options.</figcaption></figure>
+
+<h2>Providers</h2>
+<table>
+  <tr><th>Provider</th><th>Where text goes</th><th>Speed</th><th>Notes</th></tr>
+  <tr><td><b>Local AI</b> <span class="badge ok">default</span></td><td>Nowhere — runs on your CPU</td><td>0.4–1 s</td><td>Qwen 3.5 2B; private and offline.</td></tr>
+  <tr><td><b>Antigravity</b> <span class="badge warn">cloud</span></td><td>Your Antigravity account (Gemini/Claude models)</td><td>4–8 s</td><td>Best on long, rambling dictation. Audio never leaves the PC — only text. Each dictation appears as a conversation in your Antigravity history.</td></tr>
+  <tr><td><b>Offline rules</b></td><td>Nowhere</td><td>instant</td><td>Removes “um/uh”, stutters (“I I”), fixes spacing/capitals. Also the automatic fallback when an AI provider fails.</td></tr>
+</table>
+
+<!-- ============================== 6 ============================== -->
+<h1><span class="num">6</span>Per-app modes &amp; translation</h1>
+<h2>Per-app modes</h2>
+<p>Audian checks which app you're dictating into and picks the mode for it automatically. Rules match the
+program's executable name or a word in its window title (so “ChatGPT” in a browser tab works too).</p>
+<table>
+  <tr><th>Profile (default)</th><th>Mode</th><th>Matches</th></tr>
+  <tr><td>AI assistants</td><td>AI Prompt</td><td>claude.exe, ChatGPT.exe; titles containing ChatGPT, Claude, Gemini, Copilot, Perplexity</td></tr>
+  <tr><td>Code editors</td><td>AI Prompt</td><td>Code.exe, Cursor.exe, Windsurf.exe, Antigravity IDE.exe, zed.exe, devenv.exe, idea64.exe, pycharm64.exe</td></tr>
+  <tr><td>Email</td><td>Professional</td><td>OUTLOOK.EXE, olk.exe, thunderbird.exe; titles Gmail, Outlook</td></tr>
+  <tr><td>Documents</td><td>Document</td><td>WINWORD.EXE, soffice.bin, Notion.exe, Obsidian.exe; title Google Docs</td></tr>
+  <tr><td>Work chat <span class="muted">(off)</span></td><td>Professional</td><td>ms-teams.exe, Teams.exe, slack.exe</td></tr>
+</table>
+<figure><img src="img/page_profiles.png" alt="Per-app modes"><figcaption>Per-app modes are fully editable; the overlay label shows which mode is active.</figcaption></figure>
+<h2>Output language (translate as you dictate)</h2>
+<p>Under <i>Rewriting › Output language</i> (or the tray menu) choose a language to always write in. Speak Portuguese,
+get English — or the reverse. Tested results: “Você pode me explicar como funciona o borrow checker do Rust?” →
+“Can you explain how the Rust borrow checker works?”; “Can you check if the build is passing before we merge?” →
+“Pode verificar se o build está passando antes de fazer o merge?”. English and Portuguese have built-in examples for
+the local model; other target languages work best with the Antigravity provider.</p>
+<h2>Recognizing two languages</h2>
+<p>With <i>Spoken language: Auto-detect</i>, tick the languages you actually speak (e.g. English + Portuguese).
+Detection then only chooses among those — avoiding mix-ups such as short Portuguese phrases being detected as
+Galician or Spanish — and is faster.</p>
+
+<!-- ============================== 7 ============================== -->
+<h1><span class="num">7</span>The Audian window</h1>
+<p>Left-click the tray icon to open it (right-click shows a quick menu with mode, provider, output language,
+microphone, auto-stop and per-app toggles). All changes are saved and applied instantly.</p>
+<figure><img src="img/page_home.png" alt="Home"><figcaption>Home: status, your shortcut, statistics, quick settings, live resource usage and recent dictations.</figcaption></figure>
+<table>
+  <tr><th>Page</th><th>What you'll find</th></tr>
+  <tr><td>Home</td><td>Status, words dictated, time saved vs typing, quick toggles, live engine usage, recent dictations.</td></tr>
+  <tr><td>Shortcut &amp; recording</td><td>Shortcut editor with conflict check, recording style, auto-stop tuning, Esc-to-cancel, paste-last shortcut.</td></tr>
+  <tr><td>Microphone &amp; sound</td><td>Device, live level meter, gain, voice-detection sensitivity, silence threshold, max length, sound cues.</td></tr>
+  <tr><td>Speech recognition</td><td>Whisper model, CPU threads, how long the model stays loaded, languages, custom vocabulary.</td></tr>
+  <tr><td>Rewriting</td><td>AI on/off, default mode, provider, output language, custom instructions, fallback.</td></tr>
+  <tr><td>Per-app modes</td><td>Automatic mode rules.</td></tr>
+  <tr><td>Models</td><td>Download, switch and delete models; sizes, RAM and speed for each.</td></tr>
+  <tr><td>History</td><td>Searchable recent dictations with what you originally said, timing and provider; copy or clear.</td></tr>
+  <tr><td>General</td><td>Start with Windows, notifications, insertion method, clipboard restore, terminals.</td></tr>
+  <tr><td>Appearance</td><td>Colour theme (window, logo, indicator); recording indicator style, position and label, with a live preview.</td></tr>
+  <tr><td>Privacy</td><td>Data-flow summary, history, recordings, transcript logging, statistics.</td></tr>
+  <tr><td>About</td><td>Version, live resource usage, file locations.</td></tr>
+</table>
+<figure><img src="img/page_shortcut.png" alt="Shortcut" style="max-width:88%"><figcaption>Shortcut &amp; recording: the shortcut editor checks availability as you type.</figcaption></figure>
+<figure><img src="img/page_appearance.png" alt="Appearance" style="max-width:88%"><figcaption>Appearance: six themes that apply instantly, and the recording indicator in dark or light style.</figcaption></figure>
+<figure><img src="img/page_speech.png" alt="Speech recognition" style="max-width:88%"><figcaption>Speech recognition: model and how long it stays in memory — by default it exits right after each dictation.</figcaption></figure>
+<figure><img src="img/page_models.png" alt="Models" style="max-width:88%"><figcaption>Models: download, switch and remove, with size, RAM and speed for each.</figcaption></figure>
+
+<!-- ============================== 8 ============================== -->
+<h1><span class="num">8</span>Resource usage (measured)</h1>
+<p class="lead">All numbers were measured on the development PC: Intel Core i9-12900KS (16 cores / 24 threads),
+16 GB RAM, Windows 11. The GPU (RTX 5060) is <b>not used</b>: VRAM usage is zero.</p>
+<h2>The tray app</h2>
+<table>
+  <tr><th>State</th><th>RAM (working set)</th><th>CPU</th></tr>
+  <tr><td>Idle (waiting for the shortcut)</td><td><b>11 MB</b> (1.9 MB private)</td><td><b>0 ms</b> in 30 s — no timers or polling run while idle</td></tr>
+  <tr><td>Recording (15.7 s dictation)</td><td>~38 MB (audio buffer, overlay)</td><td>0.42 s total = <b>0.11 %</b> of the machine</td></tr>
+  <tr><td>Right after a dictation</td><td><b>1.5 MB</b> (memory handed back to Windows)</td><td>0</td></tr>
+  <tr><td>Audian window open</td><td>~150 MB (separate process, OpenGL)</td><td>only while animating</td></tr>
+</table>
+<h2>AI engines (separate processes)</h2>
+<table>
+  <tr><th>Engine / model</th><th>Load time</th><th>Peak RAM</th><th>CPU while working</th><th>Speed</th><th>VRAM</th></tr>
+  <tr><td>Speech: Whisper Small Q8 <span class="badge">default</span></td><td>0.45 s + 0.25 s warm-up (while you speak)</td><td><b>~450 MB</b></td><td>8 threads (~7 cores, ~30 % of this CPU)</td><td>6.6 s clip: 0.4–0.6 s<br>14.6 s clip: 1.0–1.4 s</td><td>0</td></tr>
+  <tr><td>Speech: Whisper Large v3 Turbo Q5</td><td>2.2 s</td><td><b>777 MB</b></td><td>~7.6 cores</td><td>14.6 s clip: 4.4–7.9 s</td><td>0</td></tr>
+  <tr><td>Rewriting: Qwen 3.5 2B Q4 <span class="badge">default</span></td><td>0.5 s + 25 ms prompt restore from cache (while you speak)</td><td><b>1.4 GB</b><br><span class="muted">0.5 GB private</span></td><td>~5.4 cores</td><td>0.35–1.0 s per rewrite (~30 tokens/s)</td><td>0</td></tr>
+  <tr><td>Rewriting: Antigravity</td><td>CLI start ≈4 s (hidden while you speak)</td><td>not measured (CLI process)</td><td>negligible (runs in the cloud)</td><td>4–8 s</td><td>0</td></tr>
+</table>
+<p>By default both engines <b>exit as soon as your text is inserted</b> (“Keep the model in memory: After use”),
+so between dictations Audian uses only the tray app's ~11 MB. Because the engines start the moment you press the
+shortcut and load while you speak, this costs almost nothing: in a measured dictation starting from nothing loaded,
+the text was inserted 1.9 s after the recording ended (0.6 s speech recognition + 1.2 s rewriting). If you dictate in
+quick bursts, 1 min – 1 h keeps them loaded in between, at 0 % CPU.</p>
+
+<h2>Where the memory goes</h2>
+<table>
+  <tr><th>While a dictation is processed</th><th>Memory</th><th>Notes</th></tr>
+  <tr><td>Rewriting model weights (Qwen 3.5 2B)</td><td>~0.9 GB</td><td>Memory-mapped straight from the model file: shared, file-backed pages that Windows can drop at any time. They stay in the file cache after the engine exits, which is why reloading takes only 0.5 s.</td></tr>
+  <tr><td>Rewriting engine, private</td><td>~0.5 GB</td><td>Compute buffers, attention and recurrent state, the ~27 MB prompt snapshot, the 248k-token vocabulary.</td></tr>
+  <tr><td>Speech engine (Whisper Small Q8)</td><td>~0.4 GB</td><td>Model weights (264 MB) plus encoder/decoder buffers.</td></tr>
+</table>
+<p class="muted">Task Manager's default <i>Memory</i> column counts only private memory, so it shows less than
+Audian's own resource card, which shows each engine's full working set. Version 0.2.0 peaked at 1.96 GB for the rewriting
+engine: llama.cpp kept a second, “repacked” copy of most weights (0.5 GB) and reserved a 0.5 GB compute buffer for
+512-token batches. Audian now uses the mapped weights directly and 128-token batches, with no measurable change in
+rewriting speed.</p>
+
+<h2>Only working when necessary</h2>
+<svg viewBox="0 0 680 168" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif" font-size="11.5">
+  <defs><marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#8f8a80"/></marker></defs>
+  <rect x="4" y="34" width="130" height="58" rx="10" fill="#f7f5f0" stroke="#ddd5c6"/><text x="69" y="58" text-anchor="middle" font-weight="600">Asleep</text><text x="69" y="76" text-anchor="middle" fill="#5c5852" font-size="10">no engine processes · 0 MB</text>
+  <rect x="180" y="34" width="140" height="58" rx="10" fill="#efe9dd" stroke="#d8cdb8"/><text x="250" y="58" text-anchor="middle" font-weight="600">Warming up</text><text x="250" y="76" text-anchor="middle" fill="#5c5852" font-size="10">models load while you speak</text>
+  <rect x="366" y="34" width="130" height="58" rx="10" fill="#7a6748"/><text x="431" y="58" text-anchor="middle" font-weight="600" fill="#fff">Working</text><text x="431" y="76" text-anchor="middle" fill="#f3eee4" font-size="10">≈1 s of CPU per dictation</text>
+  <rect x="542" y="34" width="134" height="58" rx="10" fill="#f7f5f0" stroke="#ddd5c6"/><text x="609" y="58" text-anchor="middle" font-weight="600">Loaded, idle</text><text x="609" y="76" text-anchor="middle" fill="#5c5852" font-size="10">optional · 0 % CPU</text>
+  <line x1="136" y1="63" x2="176" y2="63" stroke="#8f8a80" stroke-width="1.6" marker-end="url(#b)"/><text x="156" y="52" text-anchor="middle" fill="#8f8a80" font-size="9.5">shortcut</text>
+  <line x1="322" y1="63" x2="362" y2="63" stroke="#8f8a80" stroke-width="1.6" marker-end="url(#b)"/>
+  <line x1="498" y1="63" x2="538" y2="63" stroke="#8f8a80" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#b)"/><text x="518" y="52" text-anchor="middle" fill="#8f8a80" font-size="9.5">if kept</text>
+  <path d="M431,94 C431,122 69,122 69,96" fill="none" stroke="#7a6748" stroke-width="1.6" marker-end="url(#b)"/><text x="372" y="128" text-anchor="middle" fill="#7a6748" font-size="9.5">default: right after use → engines exit, memory returned to Windows</text>
+  <path d="M609,94 C609,166 69,166 69,96" fill="none" stroke="#8f8a80" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#b)"/><text x="340" y="163" text-anchor="middle" fill="#8f8a80" font-size="9.5">or after the idle time you chose (1 min – 1 h)</text>
+</svg>
+<ul>
+  <li>The microphone is opened only while recording (the Windows mic indicator is off otherwise).</li>
+  <li>The engines are separate processes started by the shortcut, not at boot, and they exit as soon as the dictation is done — also when it is cancelled or contained no speech — or after the idle time you chose. A Windows Job Object guarantees they never outlive Audian.</li>
+  <li>The tray app uses no timers while idle: key-release polling runs only while you hold the shortcut, voice detection only during hands-free dictation, and the overlay animation only while it is visible.</li>
+  <li>Preview transcriptions happen only during pauses in hands-free mode.</li>
+  <li>OpenMP is disabled in the rewriting engine, so its threads don't spin-wait after each request.</li>
+  <li>The settings window is a separate process, so its GUI memory exists only while it is open.</li>
+  <li>After each dictation the tray app returns its temporary memory to Windows.</li>
+</ul>
+
+<!-- ============================== 9 ============================== -->
+<h1><span class="num">9</span>Models: what we chose and why</h1>
+<h2>Speech recognition — Whisper Small (Q8) by default</h2>
+<p>Whisper (OpenAI, MIT licence) running through whisper.cpp is the most mature offline speech engine on Windows,
+handles 99 languages including Portuguese, and needs no GPU. On a CPU the decisive factor is speed:</p>
+<table>
+  <tr><th>Model</th><th>Disk</th><th>RAM</th><th>Speed on this PC</th><th>Portuguese error rate*</th><th>Choose it when…</th></tr>
+  <tr><td>Whisper Base</td><td>148 MB</td><td>~250 MB</td><td>≈0.2 s</td><td>~13.9 %</td><td>old or low-power PCs</td></tr>
+  <tr><td><b>Whisper Small Q8</b></td><td>264 MB</td><td>456 MB</td><td>0.4–1.4 s</td><td>~7.7 %</td><td><b>default</b> — best speed/accuracy on CPU</td></tr>
+  <tr><td>Whisper Small English</td><td>264 MB</td><td>456 MB</td><td>≈0.4 s</td><td>—</td><td>you only speak English</td></tr>
+  <tr><td>Whisper Medium Q5</td><td>539 MB</td><td>~800 MB</td><td>≈2–4 s</td><td>~5.1 %</td><td>middle ground</td></tr>
+  <tr><td>Whisper Large v3 Turbo Q5</td><td>574 MB</td><td>777 MB</td><td>3–8 s</td><td>~4.2 %</td><td>accents, noisy audio; or with a GPU build</td></tr>
+</table>
+<p class="muted">* Word error rate on the FLEURS Portuguese test set (public benchmark at Q8, lower is better).</p>
+<p><b>Why Small:</b> it is 4–6× faster than Large v3 Turbo on this CPU while being good enough for clean dictation —
+and the rewriting step fixes most remaining recognition slips (“end” → “and”). Turbo is the better choice once speed
+is not limiting (e.g. a GPU build). <b>Worth adding next:</b> NVIDIA <i>Parakeet TDT 0.6B v3</i> (ONNX) is roughly
+2× faster than Small on CPU with Turbo-like accuracy (~5 % Portuguese error rate) for 25 European languages — it would
+plug in behind the same <code>TranscriptionProvider</code> interface but requires the ONNX Runtime.</p>
+
+<h2>Rewriting — Qwen 3.5 2B (Q4_K_M) by default</h2>
+<table>
+  <tr><th>Model</th><th>Disk</th><th>RAM</th><th>Rewrite time*</th><th>Strengths / limits</th></tr>
+  <tr><td>Qwen 3.5 0.8B Q4</td><td>533 MB</td><td>~0.7 GB</td><td>≈0.3 s</td><td>Lightest; fine for cleanup, weaker at restructuring (AI Prompt).</td></tr>
+  <tr><td><b>Qwen 3.5 2B Q4</b></td><td>1.28 GB</td><td>1.4 GB</td><td>0.4–1 s</td><td><b>Default.</b> Strong instruction following for its size, 100+ languages with good Portuguese, Apache-2.0.</td></tr>
+  <tr><td>Qwen 3.5 4B Q4</td><td>2.74 GB</td><td>~2.9 GB</td><td>≈1.5–2.5 s</td><td>Better on long, rambling dictation; needs 16 GB RAM.</td></tr>
+  <tr><td>Llama 3.2 3B Instruct Q4</td><td>2.02 GB</td><td>~2.5 GB</td><td>≈1–2 s</td><td>Good English writing; weaker in Portuguese.</td></tr>
+  <tr><td>Gemma 4 E2B Q4 <span class="muted">(not in catalog)</span></td><td>3.1 GB</td><td>~3.4 GB</td><td>≈1.5 s</td><td>Strong multilingual; large file for its speed.</td></tr>
+  <tr><td>SmolLM3 3B / Phi-4-mini 3.8B <span class="muted">(not in catalog)</span></td><td>1.9 / 2.5 GB</td><td>2.3 / 2.9 GB</td><td>≈1–2 s</td><td>Good English; fewer languages.</td></tr>
+  <tr><td>Antigravity (cloud)</td><td>0</td><td>not measured</td><td>4–8 s</td><td>Best quality; needs internet; text leaves the PC.</td></tr>
+</table>
+<p class="muted">* Typical sentence on this CPU. RAM is the engine's working set while rewriting, including the memory-mapped model file; figures with “~” are estimates from file size and context shape.</p>
+<p><b>Why Qwen 3.5 2B:</b> rewriting needs a model that follows rules precisely (keep the meaning, don't answer
+questions, keep the language) while being fast enough to feel instant. In our tests the 2B model resolved
+self-corrections, removed fillers, kept Portuguese as Portuguese, never answered questions and translated reliably,
+at under a second per rewrite on the CPU — with about 1.3 GB of disk. The 0.8B model is noticeably weaker at AI-Prompt
+restructuring; 4B models are better on long inputs but 2–3× slower and need twice the RAM.</p>
+<div class="callout"><b>Using your GPU (future option)</b>Both engines can be built with GPU backends (Vulkan or CUDA for the RTX 5060). That would make Whisper Large v3 Turbo take ~0.3 s and allow bigger rewriting models, at the cost of ~1–3 GB of VRAM while loaded. Audian ships CPU-only so it works on every PC with no drivers involved.</div>
+<p>Any whisper.cpp <code>ggml-*.bin</code> model or instruction-tuned GGUF chat model placed in the models folder
+appears in the app as a “custom” model.</p>
+
+<!-- ============================== 10 ============================== -->
+<h1><span class="num">10</span>How it works inside</h1>
+<h2>Process model</h2>
+<table>
+  <tr><th>Process</th><th>Role</th><th>Technology</th></tr>
+  <tr><td><code>audian.exe</code> (tray)</td><td>Hotkeys, recording, voice detection, overlay, tray, insertion, orchestration</td><td>Rust; raw Win32 message loop; WASAPI via cpal; tiny-skia + fontdue rendering</td></tr>
+  <tr><td><code>audian.exe --settings</code></td><td>The Audian window</td><td>egui (OpenGL), separate short-lived process</td></tr>
+  <tr><td><code>audian-stt.exe</code></td><td>Speech recognition</td><td>whisper.cpp (ggml, AVX2)</td></tr>
+  <tr><td><code>audian-llm.exe</code></td><td>Local rewriting</td><td>llama.cpp (ggml, AVX2, no OpenMP)</td></tr>
+  <tr><td><code>agy.exe</code> (optional)</td><td>Cloud rewriting through Antigravity</td><td>Antigravity CLI with a tool-less custom agent</td></tr>
+</table>
+<p>Engines talk to the tray app over their stdin/stdout pipes with a framed protocol (length-prefixed JSON control
+messages, binary frames for 16 kHz PCM audio). Separate processes keep the tray app tiny, return model memory to
+Windows on exit, isolate crashes in native code, and let whisper.cpp and llama.cpp each use their own ggml library
+(they cannot be linked into one binary).</p>
+
+<h2>A dictation, step by step</h2>
+<ol>
+  <li><b>Shortcut</b> (<code>RegisterHotKey</code>; conflicts are reported). Audian notes the focused window, its caret position, process and title (title is used only for per-app modes, never logged).</li>
+  <li><b>Recording</b> starts within ~20 ms (WASAPI shared mode, device's native rate). In parallel, the engines start and load their models; the rewriting engine restores its prompt prefix from the cache.</li>
+  <li><b>Voice detection</b> on 10 ms blocks; the overlay animates from the same levels.</li>
+  <li><b>End</b>: key release (push-to-talk), second tap, or auto-stop.</li>
+  <li><b>Audio preparation</b>: windowed-sinc resampling to 16 kHz, trimming of leading/trailing silence, normalisation.</li>
+  <li><b>Transcription</b> (unless the pause preview can be reused).</li>
+  <li><b>Rewriting</b> with the session's mode; output sanitised (strip echoed tags/labels/quotes, reject outputs far longer than the input — the sign of an answer instead of a rewrite).</li>
+  <li><b>Insertion</b>: verify/restore focus → wait for modifier keys to be released → clipboard snapshot → paste → restore clipboard after 0.6 s unless you copied something new meanwhile.</li>
+  <li><b>History &amp; stats</b> recorded (text only); engines exit (with “After use”); memory trimmed.</li>
+</ol>
+
+<h2>Voice activity detection</h2>
+<p>Each 10 ms block's loudness (dBFS) is compared with an adaptive noise floor. The floor follows the quietest
+recent level — falling quickly, rising only 3 dB/s — so steady noise like fans is learned within seconds while
+the natural dips between words keep it from creeping up during speech. A block is voiced when it is
+<i>margin</i> dB above the floor (16 dB at sensitivity 0, 6 dB at sensitivity 1; default 11 dB; never below
+−60 dBFS). Speech starts after 3 voiced blocks (30 ms: ignores clicks) and ends after 200 ms of unvoiced blocks
+(bridges gaps between words). The detector also rejects recordings with no speech before any AI runs.</p>
+
+<h2>Speech recognition optimisations</h2>
+<table>
+  <tr><th>Technique</th><th>Effect (measured)</th></tr>
+  <tr><td>Compiler optimisation + AVX2 forced for whisper.cpp under MSVC</td><td>21.4 s → 2.4 s for a 6.6 s clip (the default MSVC build had no optimisation)</td></tr>
+  <tr><td>Encoder context sized to the audio length instead of a fixed 30 s window</td><td>2.4 s → 0.37 s</td></tr>
+  <tr><td>Warm-up inference while you speak</td><td>removes a ~1.5 s first-dictation penalty</td></tr>
+  <tr><td>Language detection restricted to your languages</td><td>avoids misdetection on short phrases</td></tr>
+  <tr><td>Glossary prompt from your custom vocabulary</td><td>favours your spellings of names and jargon</td></tr>
+</table>
+
+<h2>Local rewriting</h2>
+<ul>
+  <li><b>Prompt:</b> strict rules (edit, never answer; keep language, meaning, names; remove fillers; resolve self-corrections) + a mode style + your custom instructions + 6 few-shot examples written like real Whisper output, in English and Portuguese.</li>
+  <li><b>Prefix caching:</b> the system prompt and examples (~640 tokens) are evaluated once and the model state is snapshotted (~27 MB), in memory and on disk (<code>%LOCALAPPDATA%\Audian\cache</code>, the 6 most recent prompts). A freshly started engine restores it in ~25 ms instead of re-evaluating it (~3.5 s), and each dictation only processes its own ~40–60 tokens. Qwen 3.5 is a hybrid recurrent model, so a state snapshot is used rather than truncating a KV cache.</li>
+  <li><b>Lean memory:</b> weights are used straight from the memory-mapped file (llama.cpp's repacked weight copy is disabled) and the micro-batch is 128 tokens, which keeps the compute buffer — sized by the vocabulary's logits — at ~0.13 GB instead of ~0.5 GB.</li>
+  <li><b>Decoding:</b> greedy (deterministic), “thinking” disabled, output length capped relative to the input.</li>
+  <li><b>Translation</b> uses example answers in the target language, which a 2B model follows far more reliably than an instruction alone.</li>
+</ul>
+
+<h2>Antigravity integration</h2>
+<p>Audian keeps a private workspace (<code>%LOCALAPPDATA%\Audian\agy-workspace</code>) containing a custom agent with no
+tools and a minimal prompt — about 700 input tokens per request instead of ~12 000 for the default coding agent.
+The CLI is started in streaming mode when you press the shortcut, so its start-up overlaps your speech.</p>
+
+<h2>Text insertion details</h2>
+<ul>
+  <li>Clipboard snapshot copies every memory-based format (text, rich text, HTML, images as DIB, file lists), up to 64 MB.</li>
+  <li>Dictated text is tagged <code>ExcludeClipboardContentFromMonitorProcessing</code>, <code>CanIncludeInClipboardHistory=0</code>, <code>CanUploadToCloudClipboard=0</code>.</li>
+  <li>For Alt/Win shortcuts, an unassigned key is injected so releasing the modifier doesn't open menus or Start.</li>
+  <li>Elevation is detected by comparing token integrity levels; elevated targets receive the text via clipboard + notification.</li>
+  <li>“Simulate typing” sends Unicode key events (newlines as Shift+Enter so chat apps don't send early); used as fallback when the clipboard is locked.</li>
+</ul>
+
+<!-- ============================== 11 ============================== -->
+<h1><span class="num">11</span>Privacy &amp; your data</h1>
+<table>
+  <tr><th>Data</th><th>Where it goes</th><th>Stored?</th></tr>
+  <tr><td>Microphone audio</td><td>Memory of the tray app → speech engine (local pipe)</td><td>No. Optional “Keep audio recordings” saves WAV files (off by default).</td></tr>
+  <tr><td>Transcript &amp; final text</td><td>Local engines; or Antigravity if you selected it</td><td>History (text only, last 200, can be turned off/cleared). Not logged unless you enable transcript logging.</td></tr>
+  <tr><td>Window title</td><td>Used in memory to match per-app modes</td><td>Never stored or logged.</td></tr>
+  <tr><td>Statistics</td><td>Counters only (dictations, words, seconds)</td><td><code>stats.json</code>; resettable.</td></tr>
+</table>
+<figure><img src="img/page_privacy.png" alt="Privacy" style="max-width:70%"><figcaption>The Privacy page shows the data flow for your current settings.</figcaption></figure>
+<h2>Files</h2>
+<table>
+  <tr><th>What</th><th>Location</th></tr>
+  <tr><td>Program</td><td><code>%LOCALAPPDATA%\Programs\Audian</code></td></tr>
+  <tr><td>Settings</td><td><code>%APPDATA%\Audian\config.toml</code></td></tr>
+  <tr><td>Models</td><td><code>%LOCALAPPDATA%\Audian\models</code></td></tr>
+  <tr><td>History, statistics</td><td><code>%LOCALAPPDATA%\Audian\history.jsonl</code>, <code>stats.json</code></td></tr>
+  <tr><td>Logs</td><td><code>%LOCALAPPDATA%\Audian\logs</code> (rotated at 2 MB)</td></tr>
+  <tr><td>Prompt cache</td><td><code>%LOCALAPPDATA%\Audian\cache</code> — the rewriting engine's evaluated instructions and examples (never your dictations); safe to delete</td></tr>
+</table>
+
+<!-- ============================== 12 ============================== -->
+<h1><span class="num">12</span>Troubleshooting</h1>
+<table>
+  <tr><th style="width:32%">Symptom</th><th>What to do</th></tr>
+  <tr><td>Notification “Shortcut conflict”</td><td>Another app owns that shortcut. Pick another under Shortcut &amp; recording (the editor checks availability live).</td></tr>
+  <tr><td>“No speech” after speaking</td><td>Check the microphone on Microphone &amp; sound (Test microphone). Raise input gain or voice-detection sensitivity, or lower the silence threshold (the yellow mark on the meter).</td></tr>
+  <tr><td>Stops before I'm finished (hands-free)</td><td>Choose <i>Patient</i> or raise the pause tolerance; keep smart detection on.</td></tr>
+  <tr><td>Text copied instead of inserted</td><td>The target was closed or runs as administrator. Press <kbd>Ctrl</kbd>+<kbd>V</kbd>. To dictate into admin apps, run Audian as administrator too.</td></tr>
+  <tr><td>Nothing pastes in a specific app</td><td>General › Method › Simulate typing.</td></tr>
+  <tr><td>One slower dictation after changing mode, language or custom instructions</td><td>Normal: the rewriting engine prepares the new prompt once (~3.5 s) and caches it; later dictations restore it in milliseconds.</td></tr>
+  <tr><td>Back-to-back dictations feel slow on an older PC</td><td>Set “Keep the model in memory” to 1–5 minutes so the engines stay loaded between dictations.</td></tr>
+  <tr><td>Wrong language recognised</td><td>Speech recognition › Languages you speak, or fix the spoken language.</td></tr>
+  <tr><td>Antigravity errors</td><td>Make sure Antigravity is installed and signed in; the notification names the cause (sign-in, quota, network, model). Audian falls back to basic cleanup.</td></tr>
+  <tr><td>Names spelled wrong</td><td>Add them to Speech recognition › Custom vocabulary.</td></tr>
+</table>
+<h2>Diagnostics</h2>
+<pre>audian.exe --transcribe recording.wav [--mode ai_prompt] [--provider antigravity] [--output en] > out.txt
+audian.exe --rewrite-file lines.txt [--mode natural]     (prefix a line with "pt|" for Portuguese)
+audian.exe --list-devices > devices.txt
+audian.exe --reload                                      (re-read config.toml after manual edits)
+audian.exe --export-art art-out                          (logo + recording-indicator images, every theme)
+audian-stt.exe --bench ggml-small-q8_0.bin clip16k.wav 0 auto en,pt
+audian-llm.exe --bench Qwen3.5-2B-Q4_K_M.gguf - "um so I want to fix the the bug"</pre>
+<p>Set the environment variable <code>AUDIAN_LOG=debug</code> for verbose logs.</p>
+
+<!-- ============================== 13 ============================== -->
+<h1><span class="num">13</span>Configuration reference</h1>
+<p><code>%APPDATA%\Audian\config.toml</code> — everything is editable in the app; manual edits are applied with
+<i>Reload configuration</i> (tray › More) or <code>audian.exe --reload</code>. Missing keys use defaults.</p>
+<table class="long">
+  <tr><th>Section · key</th><th>Default</th><th>Meaning</th></tr>
+  <tr><td>general · start_with_windows / notifications</td><td>false / true</td><td>Startup entry; error notifications</td></tr>
+  <tr><td>general · sounds / sound_volume</td><td>true / 0.5</td><td>Start/stop chimes</td></tr>
+  <tr><td>hotkey · shortcut / mode</td><td>"Ctrl+Shift+Space" / "hybrid"</td><td>hybrid · hold · toggle</td></tr>
+  <tr><td>hotkey · escape_cancels / paste_last_shortcut</td><td>true / "Ctrl+Shift+Alt+V"</td><td>Esc cancel; re-paste shortcut ("" disables)</td></tr>
+  <tr><td>auto_stop · enabled / pause_secs</td><td>true / 2.0</td><td>Hands-free auto-stop and pause tolerance</td></tr>
+  <tr><td>auto_stop · smart / unfinished_extra_secs / no_speech_secs</td><td>true / 1.5 / 8.0</td><td>Sentence-aware waiting</td></tr>
+  <tr><td>audio · device_id / device_name</td><td>"" (system default)</td><td>Microphone</td></tr>
+  <tr><td>audio · gain / vad_sensitivity / silence_threshold / max_duration_secs</td><td>1.0 / 0.5 / 0.006 / 300</td><td>Input processing</td></tr>
+  <tr><td>transcription · language / auto_languages / vocabulary</td><td>"auto" / [] / []</td><td>Recognition language(s), glossary</td></tr>
+  <tr><td>transcription.whisper · model / threads / keep_loaded_minutes</td><td>"ggml-small-q8_0.bin" / 0 / 0</td><td>0 threads = auto; 0 minutes = unload right after use</td></tr>
+  <tr><td>processing · enabled / mode / provider</td><td>true / "natural" / "local_llm"</td><td>Rewriting on/off, default mode, provider (local_llm · antigravity · rules)</td></tr>
+  <tr><td>processing · custom_instructions / output_language / fallback_to_rules</td><td>"" / "same" / true</td><td>Extra instructions; translation target</td></tr>
+  <tr><td>processing.local_llm · model / threads / keep_loaded_minutes / max_output_tokens / timeout_secs</td><td>"Qwen3.5-2B-Q4_K_M.gguf" / 0 / 0 / 768 / 45</td><td>Local rewriting engine</td></tr>
+  <tr><td>processing.antigravity · executable / model / timeout_secs</td><td>"" / "gemini-3.8-flash-low" / 30</td><td>Cloud rewriting</td></tr>
+  <tr><td>profiles · enabled / rules[]</td><td>true / 5 rules</td><td>Per-app modes (name, enabled, mode, apps, title_keywords)</td></tr>
+  <tr><td>insertion · method / restore_clipboard / restore_delay_ms</td><td>"paste" / true / 600</td><td>How text is inserted</td></tr>
+  <tr><td>insertion · terminal_single_line / trailing_space</td><td>true / false</td><td>Formatting</td></tr>
+  <tr><td>overlay · position / show_label / style</td><td>"auto" / true / "dark"</td><td>auto · bottom_center · top_center; dark · light</td></tr>
+  <tr><td>appearance · theme</td><td>"ivory"</td><td>ivory · violet · ocean · mint · sunset · rose</td></tr>
+  <tr><td>privacy · history / history_limit / save_recordings / log_transcripts</td><td>true / 200 / false / false</td><td>Stored data</td></tr>
+</table>
+
+<!-- ============================== 14 ============================== -->
+<h1><span class="num">14</span>Building &amp; publishing</h1>
+<p>Requirements: Rust (MSVC toolchain), Visual Studio 2022 Build Tools with <i>C++ build tools</i>, <i>Windows 11 SDK</i>
+and <i>C++ Clang Compiler for Windows</i>, plus CMake.</p>
+<pre>.\scripts\build.ps1        # app and engines  → target\release
+.\scripts\package.ps1      # + installer      → dist\Audian-Setup-1.0.0-x64.exe (prints size and SHA-256)
+cargo test --release       # unit tests (config, IPC, VAD, auto-stop, hotkeys, DSP, rules, sanitizer)</pre>
+<table>
+  <tr><th>Crate</th><th>Role</th></tr>
+  <tr><td>audian</td><td>Tray app + Audian window</td></tr>
+  <tr><td>audian-stt / audian-llm</td><td>Speech and rewriting engines</td></tr>
+  <tr><td>audian-setup</td><td>Installer/uninstaller; embeds the app binaries (deflate-compressed)</td></tr>
+  <tr><td>audian-common</td><td>Config, model catalog, downloader, history, IPC, logging, WAV</td></tr>
+  <tr><td>audian-ui / audian-art / audian-build</td><td>Design system · vector artwork · icon/manifest/version embedding</td></tr>
+</table>
+<div class="callout warn"><b>Before publishing</b>The installer is not code-signed, so Windows SmartScreen will warn users downloading it (“Windows protected your PC”). Signing it with a code-signing certificate (or distributing through the Microsoft Store / winget) removes the warning. Models are downloaded from Hugging Face on the user's machine — check the model licences (Whisper: MIT; Qwen 3.5: Apache-2.0; Llama 3.2: Llama Community License) if you redistribute them.</div>
+
+</body>
+</html>

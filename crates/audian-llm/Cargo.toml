@@ -1,0 +1,26 @@
+[package]
+name = "audian-llm"
+description = "Audian local text-rewriting helper process (llama.cpp)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "audian-llm"
+path = "src/main.rs"
+
+[dependencies]
+audian-common.workspace = true
+anyhow.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# Default features enable OpenMP, whose worker threads spin-wait after each inference and
+# waste CPU in a background app; ggml's own thread pool is used instead.
+llama-cpp-2 = { version = "0.1", default-features = false }
+# Only for model parameters the safe wrapper does not expose (see `load_model`).
+llama-cpp-sys-2 = { version = "0.1.158", default-features = false }
+
+[build-dependencies]
+audian-build.workspace = true

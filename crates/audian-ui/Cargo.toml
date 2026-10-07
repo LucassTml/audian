@@ -1,0 +1,10 @@
+[package]
+name = "audian-ui"
+description = "Shared visual design system (theme, animated widgets) for Audian's windows"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+audian-common.workspace = true
+eframe = { version = "0.36", default-features = false, features = ["glow", "default_fonts"] }

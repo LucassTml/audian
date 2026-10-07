@@ -1,0 +1,22 @@
+[package]
+name = "audian-stt"
+description = "Audian speech-to-text helper process (whisper.cpp)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "audian-stt"
+path = "src/main.rs"
+
+[dependencies]
+audian-common.workspace = true
+anyhow.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+whisper-rs = { version = "0.16", features = ["log_backend"] }
+
+[build-dependencies]
+audian-build.workspace = true
