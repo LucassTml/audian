@@ -131,7 +131,13 @@ impl ChatMessage {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum LlmResponse {
-    Loaded { model: String, load_ms: u64 },
+    Loaded {
+        model: String,
+        load_ms: u64,
+        /// Graphics card the model runs on; empty for the CPU.
+        #[serde(default)]
+        device: String,
+    },
     Prepared { prefix_tokens: u32, elapsed_ms: u64 },
     Output { id: u64, text: String, prompt_tokens: u32, generated_tokens: u32, elapsed_ms: u64 },
     Error { id: Option<u64>, message: String },

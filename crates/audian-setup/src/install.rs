@@ -26,6 +26,7 @@ const PAYLOAD: &[(&str, &[u8])] = &[
     ("audian-stt.exe", include_bytes!(concat!(env!("OUT_DIR"), "/audian-stt.exe.z"))),
     ("audian-parakeet.exe", include_bytes!(concat!(env!("OUT_DIR"), "/audian-parakeet.exe.z"))),
     ("audian-llm.exe", include_bytes!(concat!(env!("OUT_DIR"), "/audian-llm.exe.z"))),
+    ("audian-llm-gpu.exe", include_bytes!(concat!(env!("OUT_DIR"), "/audian-llm-gpu.exe.z"))),
 ];
 #[cfg(no_payload)]
 const PAYLOAD: &[(&str, &[u8])] = &[];
@@ -147,7 +148,7 @@ fn audian_processes() -> Vec<u32> {
         while ok {
             let len = e.szExeFile.iter().position(|&c| c == 0).unwrap_or(0);
             let name = String::from_utf16_lossy(&e.szExeFile[..len]).to_lowercase();
-            if e.th32ProcessID != me && matches!(name.as_str(), "audian.exe" | "audian-stt.exe" | "audian-parakeet.exe" | "audian-llm.exe") {
+            if e.th32ProcessID != me && matches!(name.as_str(), "audian.exe" | "audian-stt.exe" | "audian-parakeet.exe" | "audian-llm.exe" | "audian-llm-gpu.exe") {
                 out.push(e.th32ProcessID);
             }
             ok = Process32NextW(snap, &mut e).is_ok();
@@ -305,7 +306,7 @@ pub fn uninstall(purge: bool) -> anyhow::Result<()> {
     for (name, _) in PAYLOAD {
         let _ = std::fs::remove_file(dir.join(name));
     }
-    for name in ["audian.exe", "audian-stt.exe", "audian-parakeet.exe", "audian-llm.exe"] {
+    for name in ["audian.exe", "audian-stt.exe", "audian-parakeet.exe", "audian-llm.exe", "audian-llm-gpu.exe"] {
         let _ = std::fs::remove_file(dir.join(name));
     }
     if purge {

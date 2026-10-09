@@ -137,7 +137,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "audian"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "audian-art",
@@ -157,14 +157,14 @@ dependencies = [
 
 [[package]]
 name = "audian-art"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "tiny-skia",
 ]
 
 [[package]]
 name = "audian-build"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "audian-art",
  "embed-resource",
@@ -172,7 +172,7 @@ dependencies = [
 
 [[package]]
 name = "audian-common"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "log",
@@ -185,7 +185,21 @@ dependencies = [
 
 [[package]]
 name = "audian-llm"
-version = "1.1.0"
+version = "1.2.0"
+dependencies = [
+ "anyhow",
+ "audian-build",
+ "audian-common",
+ "llama-cpp-2",
+ "llama-cpp-sys-2",
+ "log",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "audian-llm-gpu"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "audian-build",
@@ -199,7 +213,7 @@ dependencies = [
 
 [[package]]
 name = "audian-parakeet"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "audian-build",
@@ -210,7 +224,7 @@ dependencies = [
 
 [[package]]
 name = "audian-setup"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "audian-art",
@@ -225,7 +239,7 @@ dependencies = [
 
 [[package]]
 name = "audian-stt"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "audian-build",
@@ -238,7 +252,7 @@ dependencies = [
 
 [[package]]
 name = "audian-ui"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "audian-common",
  "eframe",

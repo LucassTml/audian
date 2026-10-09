@@ -79,7 +79,7 @@ impl Monitor {
                 let slot = match name.as_str() {
                     "audian.exe" if pid == daemon_pid => Some(&mut snap.tray),
                     "audian-stt.exe" | "audian-parakeet.exe" => Some(&mut snap.speech),
-                    "audian-llm.exe" => Some(&mut snap.rewrite),
+                    "audian-llm.exe" | "audian-llm-gpu.exe" => Some(&mut snap.rewrite),
                     _ => None,
                 };
                 if let Some(slot) = slot {

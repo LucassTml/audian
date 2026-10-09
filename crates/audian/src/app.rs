@@ -108,6 +108,8 @@ struct RecordingSession {
     /// Configuration for this dictation (processing mode chosen by app profile).
     cfg: Config,
     preview: Option<Preview>,
+    /// Rewrite of the preview taken when the voice ended at this `last_voice_ms`.
+    ahead: Option<(u32, pipeline::RewriteSlot)>,
 }
 
 enum Phase {
@@ -305,6 +307,7 @@ impl App {
         autostart::sync(self.cfg.general.start_with_windows);
         self.refresh_tray();
         log::info!("{} {} started", audian_common::APP_NAME, audian_common::APP_VERSION);
+        crate::text::local_llm::prepare_gpu_in_background(&self.cfg);
         if first_run || !self.cfg.general.welcome_done || models_missing(&self.cfg) {
             self.open_settings(Some("welcome"));
         }
@@ -538,6 +541,7 @@ impl App {
             hands_free,
             cfg: session_cfg,
             preview: None,
+            ahead: None,
         }));
         if hands_free {
             self.enter_hands_free();
@@ -560,6 +564,8 @@ impl App {
             Decision::Continue => {}
             Decision::RequestPreview => {
                 r.preview = Some(Preview { at_voice_ms: status.last_voice_ms, text: None, language: String::new() });
+                let slot = pipeline::RewriteSlot::default();
+                r.ahead = Some((status.last_voice_ms, slot.clone()));
                 let samples = r.recorder.snapshot();
                 let rate = r.recorder.sample_rate();
                 let cfg = r.cfg.clone();
@@ -567,12 +573,20 @@ impl App {
                 let engines = self.engines.clone();
                 let sink = self.sink.clone();
                 std::thread::spawn(move || {
-                    let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                    let mut sent = false;
+                    let _ = std::panic::catch_unwind(AssertUnwindSafe(|| {
                         let mut engines = engines.lock().unwrap_or_else(|e| e.into_inner());
-                        pipeline::preview(&mut engines, &samples, rate, &cfg)
-                    }))
-                    .unwrap_or(None);
-                    sink.send(AppEvent::Preview { session, at_voice_ms, result });
+                        let result = pipeline::preview(&mut engines, &samples, rate, &cfg);
+                        // The pause decision needs the transcript now; the rewrite takes longer.
+                        sink.send(AppEvent::Preview { session, at_voice_ms, result: result.clone() });
+                        sent = true;
+                        if let Some(preview) = result {
+                            pipeline::rewrite_ahead(&mut engines, &preview, &cfg, &slot);
+                        }
+                    }));
+                    if !sent {
+                        sink.send(AppEvent::Preview { session, at_voice_ms, result: None });
+                    }
                 });
             }
             Decision::Stop => {
@@ -594,7 +608,7 @@ impl App {
         let Phase::Recording(r) = std::mem::replace(&mut self.phase, Phase::Idle) else {
             return;
         };
-        let RecordingSession { session, recorder, target, cfg, preview, .. } = *r;
+        let RecordingSession { session, recorder, target, cfg, preview, ahead, .. } = *r;
         let device = recorder.device_name.clone();
         let recording = recorder.stop();
         log::info!(
@@ -617,9 +631,11 @@ impl App {
         self.cue(Cue::Stop);
 
         // Reuse the transcript computed during the final pause if nothing was said since.
+        let last_voice_ms = recording.vad.last_voice_ms;
+        let rewritten = ahead.filter(|(at, _)| *at == last_voice_ms).map(|(_, slot)| slot);
         let precomputed = preview
-            .filter(|p| p.at_voice_ms == recording.vad.last_voice_ms)
-            .and_then(|p| p.text.filter(|t| !t.trim().is_empty()).map(|text| Precomputed { text, language: p.language }));
+            .filter(|p| p.at_voice_ms == last_voice_ms)
+            .and_then(|p| p.text.filter(|t| !t.trim().is_empty()).map(|text| Precomputed { text, language: p.language, rewritten }));
         let mode = cfg.processing.mode;
         let ai = cfg.processing.enabled && mode != ProcessingMode::Literal;
         let first_label = if precomputed.is_some() && ai { "Polishing" } else { "Transcribing" };
@@ -901,6 +917,9 @@ impl App {
         let autostart_changed = new.general.start_with_windows != self.cfg.general.start_with_windows;
         if !new.privacy.history && self.cfg.privacy.history {
             self.last_text = None;
+        }
+        if new.processing.local_llm != self.cfg.processing.local_llm || new.processing.provider != self.cfg.processing.provider {
+            crate::text::local_llm::prepare_gpu_in_background(&new);
         }
         self.cfg = new;
         self.overlay.set_appearance(self.cfg.appearance.theme, self.cfg.overlay.style);

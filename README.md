@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Open-source voice dictation for Windows. Speak naturally, get polished text wherever you type.</b><br>
-  Private by default: speech recognition and rewriting run on your own CPU.
+  Private by default: speech recognition and rewriting run on your own PC.
 </p>
 
 <p align="center">
@@ -26,7 +26,7 @@ shortcut in any app, talk the way you normally talk ("um, so basically I want to
 login bug, no wait, the signup bug"), and a clean version of what you *meant* is typed for you,
 in ChatGPT, Claude, VS Code, Word, Slack, Outlook, a browser or a terminal.
 
-Unlike cloud dictation tools, Audian runs speech recognition (**Whisper** or **NVIDIA Parakeet**) and a
+Unlike cloud dictation tools, Audian runs speech recognition (**NVIDIA Parakeet** or **Whisper**) and a
 small **Qwen** language model (rewriting) **locally**, with no account, no subscription and no audio
 leaving your PC.
 
@@ -37,18 +37,22 @@ leaving your PC.
 
 - 🎙️ **Speak anywhere.** One global shortcut works in every app. Hold it to talk, or tap it once
   and just talk: Audian notices when you've finished.
-- ✨ **Says what you meant.** Removes "um"s and false starts, resolves self-corrections ("Tuesday,
-  no, Wednesday" → "Wednesday"), fixes punctuation, and keeps your language and your voice.
+- ✨ **Says what you meant.** Removes "um"s and false starts, resolves self-corrections ("at 9 p.m.,
+  actually no, at 8" → "at 8 p.m."; "às 9, na verdade às 8" → "às 8"), fixes punctuation, and keeps
+  your language and your voice.
 - 🧠 **Six writing modes.** Natural, AI Prompt, Professional, Document, Literal and Custom. Per-app
   rules pick one automatically: AI Prompt in ChatGPT or VS Code, Professional in Outlook, and so on.
-- 🔒 **Private by default.** whisper.cpp, Parakeet and llama.cpp run on the CPU. Nothing is sent
+- 🔒 **Private by default.** Parakeet, whisper.cpp and llama.cpp run on your PC. Nothing is sent
   anywhere unless you opt in to the cloud rewriting provider (Antigravity).
-- 🎧 **Two speech engines.** Whisper (99 languages) or NVIDIA Parakeet (faster and more accurate,
-  25 European languages), both offline on your CPU.
+- 🎧 **Two speech engines.** NVIDIA Parakeet (the default: fast and accurate, 25 European
+  languages) or Whisper (99 languages), both offline.
+- 🖥️ **Uses your graphics card.** With a dedicated NVIDIA, AMD or Intel card, rewriting runs on it
+  (Vulkan): 0.3 s instead of 1.5 s per rewrite on an RTX 5060. Without one, the CPU is used.
 - 🪶 **Light.** The tray app idles at about 11 MB of RAM and 0 % CPU. The AI engines load while you
   speak and exit as soon as your text is inserted.
-- ⚡ **Fast.** Usually 0.5 to 2 s from the end of your sentence to text on screen, on CPU only.
-- 🌍 **Multilingual.** 99 languages for recognition, bilingual auto-detection, and
+- ⚡ **Fast.** Usually 0.3 to 2 s from the end of your sentence to text on screen. In hands-free
+  mode the text is often ready before Audian even stops listening.
+- 🌍 **Multilingual.** 25 languages with Parakeet or 99 with Whisper, bilingual auto-detection, and
   translate-as-you-dictate (speak Portuguese, get English).
 - 🎨 **Themes and light mode.** Six colour themes (Ivory, Violet, Ocean, Mint, Sunset, Rose), a light
   or dark window (or follow Windows), and a dark or light recording indicator.
@@ -58,20 +62,21 @@ leaving your PC.
 
 ## Download
 
-Get **[Audian-Setup-1.1.0-x64.exe](https://github.com/LucassTml/audian/releases/latest)** from the
+Get **[Audian-Setup-1.2.0-x64.exe](https://github.com/LucassTml/audian/releases/latest)** from the
 Releases page and run it.
 
 - Installs for your Windows account only, so no administrator rights are needed.
-- It can download the AI models during setup (about 1.5 GB, verified with SHA-256), or the welcome
-  screen does it on first launch.
+- It can download the AI models during setup (NVIDIA Parakeet and Qwen 3.5 2B, about 2 GB, verified
+  with SHA-256), or the welcome screen does it on first launch. Whisper is optional, on the Models
+  page.
 - Requirements: Windows 10 or 11, 64-bit, a CPU with AVX2 (most PCs since 2015), 8 GB of RAM
-  recommended.
+  recommended. A graphics card is optional.
 
 > The installer is not code-signed yet, so Windows SmartScreen may show "Windows protected your
 > PC". Choose **More info › Run anyway**. You can check the download against the SHA-256 listed
 > in the release notes.
 
-Silent install: `Audian-Setup-1.1.0-x64.exe --quiet [--with-models] [--no-autostart] [--no-launch] [--desktop-shortcut]`.
+Silent install: `Audian-Setup-1.2.0-x64.exe --quiet [--with-models] [--no-autostart] [--no-launch] [--desktop-shortcut]`.
 Uninstall from *Settings › Apps*, or run `uninstall.exe --uninstall [--quiet] [--purge]`.
 
 ## How to use
@@ -107,43 +112,51 @@ A small indicator follows your text cursor while you dictate:
 | | |
 |---|---|
 | <img src="docs/screenshots/appearance.png" alt="Appearance"> | <img src="docs/screenshots/rewriting.png" alt="Rewriting modes"> |
-| **Appearance:** light or dark window, theme and recording indicator, with a live preview | **Rewriting:** modes and AI provider |
+| **Appearance:** light or dark window, theme and recording indicator, with a live preview | **Rewriting:** AI provider, Balanced or Fast model, graphics card |
 | <img src="docs/screenshots/models.png" alt="Models"> | <img src="docs/screenshots/history.png" alt="History"> |
 | **Models:** download, switch and remove, with RAM and speed for each | **History:** what you said and what was typed |
 | <img src="docs/screenshots/speech.png" alt="Speech recognition"> | <img src="docs/screenshots/setup.png" alt="Installer"> |
-| **Speech recognition:** Whisper or NVIDIA Parakeet | **Installer:** per-user, optional model download |
+| **Speech recognition:** NVIDIA Parakeet or Whisper | **Installer:** per-user, optional model download |
 
 ## How it works
 
 ```
- shortcut ─► record mic ─► voice detection ─► Whisper (local) ─► rewrite ─► paste at your cursor
-             (WASAPI)      adaptive noise      speech-to-text     Qwen 3.5 2B (local),
-                           floor, smart        on the CPU         Antigravity (cloud, opt-in)
-                           auto-stop                              or simple rules
+ shortcut ─► record mic ─► voice detection ─► Parakeet or ─► rewrite ─► paste at your cursor
+             (WASAPI)      adaptive noise      Whisper         Qwen 3.5 (local, graphics card
+                           floor, smart        (local)         or CPU), Antigravity (cloud,
+                           auto-stop                           opt-in) or simple rules
 ```
 
-- **Separate engine processes.** Speech (`audian-stt` with whisper.cpp, or `audian-parakeet` with
-  ONNX Runtime) and rewriting (`audian-llm`, llama.cpp) run as helper processes. They start when you press the shortcut, load while you
-  speak, and exit after the dictation, so their memory goes straight back to Windows.
+- **Separate engine processes.** Speech (`audian-parakeet` with ONNX Runtime, or `audian-stt` with
+  whisper.cpp) and rewriting (`audian-llm`, llama.cpp; `audian-llm-gpu` is its Vulkan build) run as
+  helper processes. They start when you press the shortcut, load while you speak, and exit after
+  the dictation, so their memory goes straight back to Windows.
+- **Graphics card when it helps.** Rewriting runs on a dedicated graphics card if there is one with
+  enough free memory, and falls back to the CPU if the driver fails. Built-in graphics are skipped:
+  they measured slower than the CPU. The first use after installing is prepared in the background.
 - **Smart end-of-speech detection.** During pauses Audian transcribes what it has so far. If the
-  sentence sounds unfinished ("…and", "because", "e"), it waits longer. The preview is reused, so
-  results appear sooner.
+  sentence sounds unfinished ("…and", "because", "e"), it waits longer. If it sounds finished, the
+  local model already rewrites it, so the text is ready the moment Audian stops listening.
+- **Self-correction hints.** Phrases like "na verdade", "quer dizer", "I mean" or "scratch that" are
+  spotted before rewriting and pointed out to the model, which then keeps only the corrected
+  version. Small models often miss a correction in the middle of a sentence otherwise.
 - **Prompt caching.** The rewriting model's instructions are evaluated once and cached on disk, so
   a freshly started engine is ready in about 0.5 s.
 - **Tiny tray app.** Plain Win32: a layered, click-through indicator drawn with tiny-skia, no GPU
   context. The settings window (egui) is a separate process that exists only while it is open.
 
-### Models and resources (measured on an i9-12900KS, CPU only)
+### Models and resources (measured on an i9-12900KS and an RTX 5060)
 
 | Engine | Model | Disk | RAM while working | Speed |
 |---|---|---|---|---|
-| Speech | Whisper Small Q8 (default) | 264 MB | ~450 MB | 0.4–1.4 s per sentence |
+| Speech | NVIDIA Parakeet TDT 0.6B v3 (int8, default) | 671 MB | ~0.8 GB | 0.2–0.5 s, 25 European languages |
+| Speech | Whisper Small Q8 | 264 MB | ~450 MB | 0.4–1.4 s per sentence, 99 languages |
 | Speech | Whisper Large v3 Turbo Q5 | 574 MB | ~780 MB | 3–8 s, most accurate Whisper |
-| Speech | NVIDIA Parakeet TDT 0.6B v3 (int8) | 671 MB | ~0.8 GB | 0.2–0.5 s, 25 European languages |
-| Rewriting | Qwen 3.5 2B Q4_K_M (default) | 1.28 GB | ~1.4 GB (0.5 GB private) | 0.4–1 s per rewrite |
-| Rewriting | Qwen 3.5 0.8B / 4B, Llama 3.2 3B | 0.5–2.7 GB | 0.7–2.9 GB | optional |
+| Rewriting | Qwen 3.5 2B Q4_K_M (default, "Balanced") | 1.28 GB | ~1.4 GB (0.5 GB private) | ~0.3 s on a graphics card, 1–2 s on the CPU |
+| Rewriting | Qwen 3.5 0.8B Q4_K_M ("Fast") | 0.53 GB | ~0.7 GB | about 1.5× faster on the CPU, but misses most self-corrections |
+| Rewriting | Qwen 3.5 4B, Llama 3.2 3B | 2.0–2.7 GB | 2.2–2.9 GB | optional |
 
-Between dictations only the tray app is running (~11 MB). No GPU or VRAM is used.
+Between dictations only the tray app is running (~11 MB), and no video memory is used.
 
 📘 The **[user & technical manual](docs/Audian-Manual.pdf)** (PDF) covers everything in detail:
 auto-stop tuning, every mode, per-app rules, resource measurements, why these models were chosen,
@@ -163,7 +176,8 @@ There is no telemetry.
 ## Build from source
 
 Requirements: Rust (MSVC toolchain), Visual Studio 2022 Build Tools (*Desktop development with C++*,
-*Windows 11 SDK*, *C++ Clang Compiler for Windows*) and CMake.
+*Windows 11 SDK*, *C++ Clang Compiler for Windows*), CMake, and the
+[Vulkan SDK](https://vulkan.lunarg.com) (for the graphics-card build of the rewriting engine).
 
 ```powershell
 git clone https://github.com/LucassTml/audian
@@ -180,7 +194,8 @@ build of whisper.cpp is about 25× slower.
 | `audian` | Tray app, recording indicator and the Audian window (`--settings`) |
 | `audian-stt` | Speech engine process (whisper.cpp) |
 | `audian-parakeet` | Speech engine process (NVIDIA Parakeet on ONNX Runtime) |
-| `audian-llm` | Rewriting engine process (llama.cpp) |
+| `audian-llm` | Rewriting engine process (llama.cpp, CPU) |
+| `audian-llm-gpu` | The same engine built with Vulkan, for graphics cards (built separately by `build.ps1`) |
 | `audian-setup` | Installer and uninstaller (embeds the engines above) |
 | `audian-common` | Config, themes, model catalog, downloader, history, IPC, logging |
 | `audian-ui` | Design system: theme and animated widgets |
@@ -199,7 +214,8 @@ build of whisper.cpp is about 25× slower.
 | `audian.exe --export-art <dir>` | Logo and recording-indicator images for every theme |
 | `audian-stt.exe --bench <model> <16kHz.wav> [threads] [lang] [en,pt]` | Speech benchmark (Whisper) |
 | `audian-parakeet.exe --bench <model-folder> <16kHz.wav> [threads] [en,pt]` | Speech benchmark (Parakeet) |
-| `audian-llm.exe --bench <model> - "<text>"` | Rewriting benchmark |
+| `audian-llm.exe --bench <model> - "<text>"` | Rewriting benchmark (CPU; `audian-llm-gpu.exe` for the graphics card) |
+| `audian-llm-gpu.exe --probe` | The graphics card rewriting would use, and its free memory |
 
 Output appears only when redirected (GUI-subsystem executables). Logs are in
 `%LOCALAPPDATA%\Audian\logs`.

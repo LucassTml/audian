@@ -1,0 +1,30 @@
+[package]
+name = "audian-llm-gpu"
+description = "Audian local text-rewriting helper process, Vulkan GPU build (llama.cpp)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+# Same source as audian-llm, built with llama.cpp's Vulkan backend. Built on its own
+# (scripts/build.ps1): in a shared cargo invocation, feature unification would give the CPU
+# build Vulkan too, and that binary must start on PCs without a Vulkan driver.
+[[bin]]
+name = "audian-llm-gpu"
+path = "../audian-llm/src/main.rs"
+
+[features]
+default = ["gpu"]
+gpu = []
+
+[dependencies]
+audian-common.workspace = true
+anyhow.workspace = true
+log.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+llama-cpp-2 = { version = "0.1", default-features = false, features = ["vulkan"] }
+llama-cpp-sys-2 = { version = "0.1.158", default-features = false, features = ["vulkan"] }
+
+[build-dependencies]
+audian-build.workspace = true

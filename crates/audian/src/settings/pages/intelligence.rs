@@ -2,6 +2,7 @@
 
 use audian_common::catalog::{self, ModelKind};
 use audian_common::config::{AppProfile, ProcessingMode, RewriteProvider, SttProvider};
+use audian_common::download::State;
 use eframe::egui::{self, RichText, vec2};
 
 use super::super::theme::{icon, *};
@@ -29,6 +30,37 @@ fn model_combo(ui: &mut egui::Ui, id: &str, value: &mut String, files: &[String]
     });
 }
 
+const BALANCED_MODEL: &str = "Qwen3.5-2B-Q4_K_M.gguf";
+const FAST_MODEL: &str = "Qwen3.5-0.8B-Q4_K_M.gguf";
+
+/// Download button / progress for the selected rewriting model when it is not installed yet.
+fn model_download_row(app: &mut SettingsApp, ui: &mut egui::Ui) {
+    let Some(m) = catalog::find(&app.draft.processing.local_llm.model) else { return };
+    if app.model_installed(m) {
+        return;
+    }
+    let dl = app.download_for(m.file).cloned();
+    w::row(ui, &format!("{} is not downloaded", m.name), &format!("{} · needed before it can be used.", catalog::format_size(m.size)), |ui| {
+        match dl.map(|d| (d.state(), d)) {
+            Some((State::Downloading, d)) => w::progress(ui, d.fraction(), 180.0),
+            Some((State::Verifying, _)) => {
+                ui.label(RichText::new("Verifying…").size(13.0).color(text_dim()));
+            }
+            Some((State::Failed(e), _)) => {
+                if w::secondary(ui, "Retry").clicked() {
+                    app.download(m);
+                }
+                ui.label(RichText::new(e).size(12.0).color(warn()));
+            }
+            _ => {
+                if w::secondary_icon(ui, icon::DOWNLOAD, "Download").clicked() {
+                    app.download(m);
+                }
+            }
+        }
+    });
+}
+
 /// How long an engine stays loaded after a dictation. Stored as minutes; values set by hand in
 /// the config file snap to the nearest choice.
 fn keep_control(ui: &mut egui::Ui, id: &str, minutes: &mut u32) {
@@ -46,8 +78,8 @@ pub fn speech(app: &mut SettingsApp, ui: &mut egui::Ui) {
         let per_row = 2;
         let tw = tile_width(ui, per_row);
         let engines = [
-            (SttProvider::WhisperLocal, "Whisper", icon::LOCK, "OpenAI Whisper on your CPU. 99 languages, custom vocabulary."),
-            (SttProvider::Parakeet, "NVIDIA Parakeet", icon::SPARKLE, "Faster and more accurate on your CPU. 25 European languages."),
+            (SttProvider::Parakeet, "NVIDIA Parakeet", icon::SPARKLE, "Recommended. Fast and accurate on any PC. 25 European languages."),
+            (SttProvider::WhisperLocal, "Whisper", icon::GLOBE, "OpenAI Whisper. 99 languages and custom vocabulary."),
         ];
         for chunk in engines.chunks(per_row) {
             ui.horizontal(|ui| {
@@ -187,7 +219,7 @@ pub fn rewriting(app: &mut SettingsApp, ui: &mut egui::Ui) {
             let per_row = tiles_per_row(ui);
             let tw = tile_width(ui, per_row);
             let providers = [
-                (RewriteProvider::LocalLlm, icon::LOCK, "Small model on your CPU. Private and offline."),
+                (RewriteProvider::LocalLlm, icon::LOCK, "Small model on this PC. Private and offline."),
                 (RewriteProvider::Antigravity, icon::CLOUD, "Your Antigravity account. Best quality, needs internet."),
                 (RewriteProvider::Rules, icon::EDIT, "No AI: removes fillers and fixes spacing. Instant."),
             ];
@@ -207,8 +239,21 @@ pub fn rewriting(app: &mut SettingsApp, ui: &mut egui::Ui) {
                         w::badge(ui, "Private", success());
                         w::badge(ui, "Offline", success());
                     });
+                    ui.label(RichText::new("Model").size(14.5).color(text()));
+                    let tw = tile_width(ui, 2);
+                    ui.horizontal(|ui| {
+                        for &(file, title, ic, desc) in &[
+                            (BALANCED_MODEL, "Balanced", icon::SPARKLE, "Qwen 3.5 2B. Best results, including spoken corrections."),
+                            (FAST_MODEL, "Fast", icon::CLOCK, "Qwen 3.5 0.8B. About 1.5× faster on the CPU, but misses most spoken corrections."),
+                        ] {
+                            if w::choice_tile(ui, vec2(tw, 92.0), ic, title, desc, app.draft.processing.local_llm.model == file).clicked() {
+                                app.draft.processing.local_llm.model = file.into();
+                            }
+                        }
+                    });
+                    model_download_row(app, ui);
                     let files = installed(app, "gguf");
-                    w::row(ui, "Model", "", |ui| {
+                    w::row(ui, "Other models", "", |ui| {
                         if ui.link("Manage models").clicked() {
                             app.go(Page::Models);
                         }
@@ -217,6 +262,18 @@ pub fn rewriting(app: &mut SettingsApp, ui: &mut egui::Ui) {
                     if let Some(m) = catalog::find(&app.draft.processing.local_llm.model) {
                         w::hint(ui, &format!("{} · ~{} MB RAM while loaded · {}", m.summary, m.ram_mb, m.speed));
                     }
+                    let gpu_note = match crate::text::local_llm::gpu_status() {
+                        None => {
+                            ui.ctx().request_repaint_after(std::time::Duration::from_millis(300));
+                            "Looking for a graphics card…".to_string()
+                        }
+                        Some(Some(gpu)) => format!("Runs on your {} — several times faster than the CPU. Falls back to the CPU if the card has a problem.", gpu.name),
+                        Some(None) => "No dedicated graphics card found, so the CPU is used. (Built-in graphics are slower than the CPU for this.)".to_string(),
+                    };
+                    w::row(ui, "Use the graphics card", &gpu_note, |ui| {
+                        w::toggle(ui, &mut app.draft.processing.local_llm.gpu);
+                    });
+                    ui.add_space(6.0);
                     ui.label(RichText::new("Keep the model in memory").size(14.5).color(text()));
                     w::hint(ui, "Loads while you speak; its prompt is restored from a disk cache. \"After use\" frees its memory as soon as the text is inserted.");
                     keep_control(ui, "keep-llm", &mut app.draft.processing.local_llm.keep_loaded_minutes);

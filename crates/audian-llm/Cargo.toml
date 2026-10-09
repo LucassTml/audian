@@ -10,6 +10,10 @@ build = "build.rs"
 name = "audian-llm"
 path = "src/main.rs"
 
+# Enabled only by the audian-llm-gpu package, which builds this source with Vulkan.
+[features]
+gpu = []
+
 [dependencies]
 audian-common.workspace = true
 anyhow.workspace = true

@@ -13,7 +13,12 @@
 //! micro-batch is small, which keeps the compute buffer — dominated by the 248k-entry
 //! vocabulary's logits — small too.
 //!
-//! Also supports `audian-llm --bench <model> <text>` for performance measurements.
+//! The same source builds two executables: `audian-llm` (CPU only) and `audian-llm-gpu`
+//! (Vulkan: a dedicated NVIDIA, AMD or Intel card, falling back to the CPU if the model doesn't
+//! fit). Two binaries because a Vulkan build doesn't even start on a PC without a Vulkan driver.
+//!
+//! Also supports `audian-llm --bench <model> <text>` for performance measurements, and
+//! `audian-llm-gpu --probe` to report the graphics card it would use.
 
 #![windows_subsystem = "windows"]
 
@@ -42,6 +47,9 @@ const BATCH: usize = 512;
 /// many output rows over the whole vocabulary (~1 MB per token for Qwen3.5), so 512 would
 /// reserve ~0.5 GB; 128 costs ~4x less with no measurable speed difference here.
 const UBATCH: u32 = 128;
+/// Built with the Vulkan backend (`audian-llm-gpu`).
+const GPU_BUILD: bool = cfg!(feature = "gpu");
+
 /// Evaluated prefixes kept on disk (one per mode / custom instructions / output language).
 const PREFIX_CACHE_FILES: usize = 6;
 
@@ -63,6 +71,8 @@ struct Engine {
     thinking_model: bool,
     cached: Option<CachedPrefix>,
     n_ctx: u32,
+    /// Graphics card the model runs on, or None for the CPU.
+    device: Option<String>,
 }
 
 impl Engine {
@@ -70,7 +80,25 @@ impl Engine {
         if !Path::new(model_path).is_file() {
             bail!("model file not found: {model_path}");
         }
-        let model = Box::new(load_model(model_path)?);
+        if let Some(gpu) = gpu_device() {
+            // Weights plus context and compute buffers. Without that much free video memory the
+            // driver would spill into system memory, which is slower than the CPU.
+            let needed = std::fs::metadata(model_path).map(|m| m.len()).unwrap_or(0) + (600 << 20);
+            if gpu.free_bytes < needed {
+                log::info!("{} has {} MB free, {} MB needed; using the CPU", gpu.name, gpu.free_bytes >> 20, needed >> 20);
+            } else {
+                match Self::load_on(backend, model_path, threads, context_tokens, Some(&gpu)) {
+                    Ok(engine) => return Ok(engine),
+                    Err(e) => log::warn!("could not use {} ({e:#}); using the CPU", gpu.name),
+                }
+            }
+        }
+        Self::load_on(backend, model_path, threads, context_tokens, None)
+    }
+
+    fn load_on(backend: &LlamaBackend, model_path: &str, threads: u32, context_tokens: u32, gpu: Option<&Gpu>) -> anyhow::Result<Engine> {
+        let device = gpu.map(|g| g.name.clone());
+        let model = Box::new(load_model(model_path, gpu)?);
         // SAFETY: the model is heap-allocated and owned by the returned Engine, which drops
         // `ctx` (the only borrower) before `model`. The Box is never moved out or replaced.
         let model_ref: &'static LlamaModel = unsafe { &*(model.as_ref() as *const LlamaModel) };
@@ -89,11 +117,12 @@ impl Engine {
         let raw_template = template.as_ref().and_then(|t| t.to_str().ok()).unwrap_or("");
         let thinking_model = raw_template.contains("<think>") || raw_template.contains("enable_thinking");
         log::info!(
-            "model has {} params, chat template: {}, thinking model: {thinking_model}",
+            "model has {} params, chat template: {}, thinking model: {thinking_model}, running on {}",
             model.n_params(),
-            if template.is_some() { "yes" } else { "none (using ChatML)" }
+            if template.is_some() { "yes" } else { "none (using ChatML)" },
+            device.as_deref().unwrap_or("the CPU")
         );
-        Ok(Engine { ctx, model, model_path: model_path.into(), template, thinking_model, cached: None, n_ctx })
+        Ok(Engine { ctx, model, model_path: model_path.into(), template, thinking_model, cached: None, n_ctx, device })
     }
 
     /// Formats `prefix + [user: SENTINEL]` and splits around the sentinel, giving the
@@ -184,7 +213,7 @@ impl Engine {
             meta.len().hash(&mut h);
             meta.modified().ok().hash(&mut h);
         }
-        (self.n_ctx, UBATCH).hash(&mut h);
+        (self.n_ctx, UBATCH, self.device.is_some()).hash(&mut h);
         tokens.hash(&mut h);
         audian_common::paths::cache_dir().join(format!("llm-prefix-{:016x}.bin", h.finish()))
     }
@@ -277,18 +306,73 @@ impl Engine {
 /// Loads a model with weight repacking disabled. llama.cpp normally copies most CPU weights
 /// into a SIMD-friendly layout in private memory (~0.5 GB for a 2B model) on top of the
 /// memory-mapped file; without it the mapped file pages are used directly.
-fn load_model(model_path: &str) -> anyhow::Result<LlamaModel> {
+fn load_model(model_path: &str, gpu: Option<&Gpu>) -> anyhow::Result<LlamaModel> {
     let path = std::ffi::CString::new(model_path)?;
-    // SAFETY: plain FFI calls; the returned pointer is checked for null and owned by the
-    // LlamaModel below, which frees it on drop.
+    // NULL-terminated list of the graphics cards to use: the chosen one, or none at all (else
+    // llama.cpp would pick cards itself, built-in ones included).
+    let mut devices = [gpu.map_or(std::ptr::null_mut(), |g| g.dev), std::ptr::null_mut()];
+    // SAFETY: plain FFI calls; `devices` outlives the call (llama.cpp copies the list), and the
+    // returned pointer is checked for null and owned by the LlamaModel below, which frees it.
     let raw = unsafe {
         let mut params = llama_cpp_sys_2::llama_model_default_params();
         params.use_extra_bufts = false;
+        params.devices = devices.as_mut_ptr();
+        params.split_mode = llama_cpp_sys_2::LLAMA_SPLIT_MODE_NONE;
+        params.main_gpu = 0;
+        params.n_gpu_layers = if gpu.is_some() { 999 } else { 0 };
+        // On the card the weights are copied to video memory, so mapping the file would only
+        // keep a second, unused copy resident in RAM.
+        if gpu.is_some() {
+            params.load_mode = llama_cpp_sys_2::LLAMA_LOAD_MODE_NONE;
+            params.lazy_mode = llama_cpp_sys_2::LLAMA_LAZY_MODE_OFF;
+        }
         llama_cpp_sys_2::llama_model_load_from_file(path.as_ptr(), params)
     };
     let raw = std::ptr::NonNull::new(raw).ok_or_else(|| anyhow!("failed to load model"))?;
     // SAFETY: LlamaModel is #[repr(transparent)] over NonNull<llama_model>.
     Ok(unsafe { std::mem::transmute::<std::ptr::NonNull<llama_cpp_sys_2::llama_model>, LlamaModel>(raw) })
+}
+
+/// A graphics card found by ggml.
+struct Gpu {
+    dev: llama_cpp_sys_2::ggml_backend_dev_t,
+    name: String,
+    free_bytes: u64,
+}
+
+/// The first dedicated graphics card, if any (None in the CPU build). Built-in graphics are
+/// skipped: they share the CPU's memory bandwidth, which is what limits generation speed, and
+/// measured slower than the CPU itself (Intel UHD 770: 3.4 s vs 1.5 s for the same rewrite).
+fn gpu_device() -> Option<Gpu> {
+    if !GPU_BUILD {
+        return None;
+    }
+    use llama_cpp_sys_2::{
+        GGML_BACKEND_DEVICE_TYPE_GPU, ggml_backend_dev_count, ggml_backend_dev_description, ggml_backend_dev_get, ggml_backend_dev_memory,
+        ggml_backend_dev_type,
+    };
+    // SAFETY: read-only queries of ggml's device registry; descriptions are NUL-terminated.
+    unsafe {
+        for i in 0..ggml_backend_dev_count() {
+            let dev = ggml_backend_dev_get(i);
+            if ggml_backend_dev_type(dev) != GGML_BACKEND_DEVICE_TYPE_GPU {
+                continue;
+            }
+            let name = std::ffi::CStr::from_ptr(ggml_backend_dev_description(dev)).to_string_lossy().into_owned();
+            let (mut free, mut total) = (0usize, 0usize);
+            ggml_backend_dev_memory(dev, &mut free, &mut total);
+            return Some(Gpu { dev, name, free_bytes: free as u64 });
+        }
+    }
+    None
+}
+
+/// `--probe`: prints the dedicated graphics card the model would run on (name and free video
+/// memory in MB, tab-separated), or nothing, so the daemon only starts this build when it helps.
+fn probe() {
+    if let Some(gpu) = gpu_device() {
+        println!("{}\t{}", gpu.name, gpu.free_bytes >> 20);
+    }
 }
 
 /// Fallback ChatML formatting (Qwen and many others) when the model has no usable template.
@@ -328,6 +412,10 @@ fn main() {
         backend.void_logs();
     }
 
+    if args.get(1).map(String::as_str) == Some("--probe") {
+        probe();
+        std::process::exit(0);
+    }
     if args.get(1).map(String::as_str) == Some("--bench") {
         std::process::exit(match bench(&backend, &args[2..]) {
             Ok(()) => 0,
@@ -378,8 +466,8 @@ fn main() {
         touch();
         let response = match request {
             LlmRequest::Load { model_path, threads, context_tokens } => {
-                if engine.as_ref().is_some_and(|e| e.model_path == model_path) {
-                    LlmResponse::Loaded { model: model_path, load_ms: 0 }
+                if let Some(e) = engine.as_ref().filter(|e| e.model_path == model_path) {
+                    LlmResponse::Loaded { model: model_path, load_ms: 0, device: e.device.clone().unwrap_or_default() }
                 } else {
                     engine = None;
                     let t = Instant::now();
@@ -387,8 +475,9 @@ fn main() {
                         Ok(e) => {
                             let load_ms = t.elapsed().as_millis() as u64;
                             log::info!("loaded {model_path} in {load_ms} ms");
+                            let device = e.device.clone().unwrap_or_default();
                             engine = Some(e);
-                            LlmResponse::Loaded { model: model_path, load_ms }
+                            LlmResponse::Loaded { model: model_path, load_ms, device }
                         }
                         Err(e) => {
                             log::error!("{e:#}");
@@ -454,7 +543,7 @@ fn bench(backend: &LlamaBackend, args: &[String]) -> anyhow::Result<()> {
     let mut out = io::stdout().lock();
     let t = Instant::now();
     let mut engine = Engine::load(backend, &audian_common::paths::resolve_model(model).to_string_lossy(), threads, 4096)?;
-    writeln!(out, "load: {} ms", t.elapsed().as_millis())?;
+    writeln!(out, "load: {} ms on {}", t.elapsed().as_millis(), engine.device.as_deref().unwrap_or("the CPU"))?;
     let prefix = vec![ChatMessage::new("system", system)];
     for run in 1..=2 {
         let t = Instant::now();

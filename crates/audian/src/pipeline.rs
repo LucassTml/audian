@@ -1,9 +1,10 @@
 //! The dictation pipeline: recording -> 16 kHz audio -> transcript -> processed text.
 //! Runs on a worker thread; the UI thread only starts it and receives the result.
 
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 
-use audian_common::config::{Config, ProcessingMode};
+use audian_common::config::{Config, ProcessingMode, RewriteProvider};
 use audian_common::{SAMPLE_RATE, paths, wav};
 
 use crate::audio::{Recording, dsp};
@@ -92,10 +93,17 @@ pub enum Stage {
 }
 
 /// A transcript computed while the user was still in a pause (see `endpoint`).
+#[derive(Clone)]
 pub struct Precomputed {
     pub text: String,
     pub language: String,
+    /// Its rewrite, if one was started during the same pause (see `rewrite_ahead`).
+    pub rewritten: Option<RewriteSlot>,
 }
+
+/// Receives a rewrite done during a pause. The preview thread holds the engines lock while it
+/// rewrites, so by the time `run` gets the lock the slot is final (filled, or left empty).
+pub type RewriteSlot = Arc<OnceLock<String>>;
 
 pub struct Job {
     pub recording: Recording,
@@ -152,7 +160,39 @@ pub fn preview(engines: &mut Engines, samples: &[f32], sample_rate: u32, cfg: &C
     let audio = prepare(samples, sample_rate, cfg)?;
     let t = engines.stt.transcribe(&audio, &options(cfg)).ok()?;
     let text = rules::strip_annotations(&t.text).trim().to_string();
-    Some(Precomputed { text, language: t.language })
+    Some(Precomputed { text, language: t.language, rewritten: None })
+}
+
+/// Rewrites a pause preview straight away, so that if the dictation ends at this pause the
+/// final text is ready the moment it stops. Only with the local model (nothing is sent anywhere
+/// for text that may be thrown away) and only when the sentence sounds finished: otherwise the
+/// speaker is likely to go on, and the work would be wasted.
+pub fn rewrite_ahead(engines: &mut Engines, preview: &Precomputed, cfg: &Config, slot: &RewriteSlot) {
+    if !uses_ai(cfg)
+        || cfg.processing.provider != RewriteProvider::LocalLlm
+        || preview.text.trim().is_empty()
+        || crate::endpoint::sounds_unfinished(&preview.text)
+    {
+        return;
+    }
+    let started = Instant::now();
+    match engines.rewriter.process(&rewrite_request(&preview.text, &preview.language, cfg)) {
+        Ok(text) => {
+            log::debug!("rewrote the pause preview in {} ms", started.elapsed().as_millis());
+            let _ = slot.set(text);
+        }
+        Err(e) => log::debug!("rewriting the pause preview failed: {e}"),
+    }
+}
+
+fn rewrite_request<'a>(raw: &'a str, language: &'a str, cfg: &'a Config) -> RewriteRequest<'a> {
+    RewriteRequest {
+        text: raw,
+        language,
+        output_language: &cfg.processing.output_language,
+        mode: cfg.processing.mode,
+        custom_instructions: &cfg.processing.custom_instructions,
+    }
 }
 
 pub fn run(engines: &mut Engines, job: Job, on_stage: &dyn Fn(Stage)) -> Result<Outcome, PipelineError> {
@@ -161,9 +201,11 @@ pub fn run(engines: &mut Engines, job: Job, on_stage: &dyn Fn(Stage)) -> Result<
     engines.reconfigure(cfg);
     let audio_ms = job.recording.duration().as_millis() as u64;
 
+    let mut ahead = None;
     let (raw, language, stt_ms) = match job.precomputed {
         Some(p) => {
             log::info!("reusing transcript computed during the pause");
+            ahead = p.rewritten.and_then(|slot| slot.get().cloned());
             (p.text, p.language, 0)
         }
         None => {
@@ -183,17 +225,14 @@ pub fn run(engines: &mut Engines, job: Job, on_stage: &dyn Fn(Stage)) -> Result<
     let mut provider = "none".to_string();
     let mut text = if !uses_ai(cfg) {
         rules::literal(&raw)
+    } else if let Some(text) = ahead {
+        log::info!("reusing rewrite computed during the pause");
+        provider = engines.rewriter.name().to_string();
+        text
     } else {
         on_stage(Stage::Rewriting);
         provider = engines.rewriter.name().to_string();
-        let request = RewriteRequest {
-            text: &raw,
-            language: &language,
-            output_language: &cfg.processing.output_language,
-            mode: cfg.processing.mode,
-            custom_instructions: &cfg.processing.custom_instructions,
-        };
-        match engines.rewriter.process(&request) {
+        match engines.rewriter.process(&rewrite_request(&raw, &language, cfg)) {
             Ok(t) => t,
             Err(e) if cfg.processing.fallback_to_rules => {
                 log::warn!("{} failed: {e}; using rule-based cleanup", engines.rewriter.name());

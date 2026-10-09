@@ -11,7 +11,7 @@ use super::super::widgets as w;
 use super::super::SettingsApp;
 
 pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
-    w::page_header(ui, "Models", "Everything runs on your CPU — download only what you need.");
+    w::page_header(ui, "Models", "Everything runs on this PC — download only what you need.");
     ui.horizontal(|ui| {
         let missing: Vec<&'static ModelInfo> = catalog::recommended().filter(|m| !app.model_installed(m)).collect();
         if !missing.is_empty() {
@@ -30,7 +30,7 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
     });
     ui.add_space(12.0);
     for (kind, title, subtitle, ic) in [
-        (ModelKind::Speech, "Speech recognition", "Whisper (99 languages) and NVIDIA Parakeet (fastest, 25 European languages).", icon::SPEECH),
+        (ModelKind::Speech, "Speech recognition", "NVIDIA Parakeet (fastest, 25 European languages) and Whisper (99 languages).", icon::SPEECH),
         (ModelKind::Rewrite, "Rewriting", "Small instruction-tuned language models (GGUF, llama.cpp).", icon::SPARKLE),
     ] {
         w::card(ui, |ui| {

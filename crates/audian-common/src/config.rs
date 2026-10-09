@@ -189,7 +189,7 @@ pub struct TranscriptionConfig {
 impl Default for TranscriptionConfig {
     fn default() -> Self {
         Self {
-            provider: SttProvider::WhisperLocal,
+            provider: SttProvider::Parakeet,
             language: "auto".into(),
             auto_languages: Vec::new(),
             vocabulary: Vec::new(),
@@ -356,6 +356,9 @@ pub struct LocalLlmConfig {
     pub model: String,
     /// CPU threads; 0 = choose automatically.
     pub threads: u32,
+    /// Run the model on the graphics card (dedicated or built-in) when there is one, falling
+    /// back to the CPU if it cannot be used.
+    pub gpu: bool,
     /// Minutes the model stays in memory after the last use (0 = unload right after use, the
     /// default: it is loaded again at the next shortcut press, while the user speaks).
     pub keep_loaded_minutes: u32,
@@ -368,6 +371,7 @@ impl Default for LocalLlmConfig {
         Self {
             model: "Qwen3.5-2B-Q4_K_M.gguf".into(),
             threads: 0,
+            gpu: true,
             keep_loaded_minutes: 0,
             max_output_tokens: 768,
             timeout_secs: 45,

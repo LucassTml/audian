@@ -5,7 +5,8 @@
 //! Antigravity (cloud). The rules processor doubles as the fallback when an AI provider fails.
 
 mod antigravity;
-mod local_llm;
+pub mod local_llm;
+mod corrections;
 pub mod prompts;
 pub mod rules;
 pub mod sanitize;

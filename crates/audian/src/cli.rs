@@ -17,7 +17,7 @@ fn parse_enum<T: serde::de::DeserializeOwned>(s: &str) -> anyhow::Result<T> {
     serde_json::from_value(serde_json::Value::String(s.to_string())).map_err(|_| anyhow::anyhow!("invalid value: {s}"))
 }
 
-/// `--rewrite-file <txt> [--mode m] [--provider p]`: runs only the text-processing stage on
+/// `--rewrite-file <txt> [--mode m] [--provider p] [--gpu off] [--model file]`: runs only the text-processing stage on
 /// each line of a file (one transcript per line) — a quick evaluation loop for prompts.
 pub fn rewrite_file(args: &[String]) -> anyhow::Result<()> {
     let path = args.first().ok_or_else(|| anyhow::anyhow!("usage: --rewrite-file <txt> [--mode m] [--provider p]"))?;
@@ -28,6 +28,8 @@ pub fn rewrite_file(args: &[String]) -> anyhow::Result<()> {
             "--mode" => cfg.processing.mode = parse_enum(&args[i + 1])?,
             "--provider" => cfg.processing.provider = parse_enum(&args[i + 1])?,
             "--output" => cfg.processing.output_language = args[i + 1].clone(),
+            "--gpu" => cfg.processing.local_llm.gpu = args[i + 1] != "off",
+            "--model" => cfg.processing.local_llm.model = args[i + 1].clone(),
             other => anyhow::bail!("unknown option {other}"),
         }
         i += 2;

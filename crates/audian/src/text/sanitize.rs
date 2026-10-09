@@ -12,8 +12,17 @@ pub fn clean_output(output: &str, input: &str, allow_markdown: bool) -> Result<S
         text = text.replace('`', "");
     }
 
-    // Echoed tags.
-    for tag in ["<transcript>", "</transcript>", "<rewritten>", "</rewritten>", "<output>", "</output>"] {
+    // Echoed tags, and any echoed self-correction hint (tag and contents).
+    while let Some(start) = text.find("<self-correction") {
+        const CLOSE: &str = "</self-correction>";
+        let end = match (text[start..].find(CLOSE), text[start..].find('>')) {
+            (Some(close), _) => start + close + CLOSE.len(),
+            (None, Some(gt)) => start + gt + 1,
+            (None, None) => text.len(),
+        };
+        text.replace_range(start..end, "");
+    }
+    for tag in ["<transcript>", "</transcript>", "<rewritten>", "</rewritten>", "<output>", "</output>", "</self-correction>"] {
         text = text.replace(tag, "");
     }
     text = text.trim().to_string();
