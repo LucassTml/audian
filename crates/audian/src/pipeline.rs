@@ -72,7 +72,7 @@ impl Engines {
     /// With "keep loaded: 0 minutes", engines are shut down as soon as a dictation is done,
     /// returning all model memory to Windows immediately.
     pub fn release_if_configured(&mut self, cfg: &Config) {
-        if cfg.transcription.whisper.keep_loaded_minutes == 0 {
+        if stt::keep_loaded_minutes(cfg) == 0 {
             self.stt = stt::create(cfg);
         }
         if cfg.processing.local_llm.keep_loaded_minutes == 0 {
@@ -168,17 +168,7 @@ pub fn run(engines: &mut Engines, job: Job, on_stage: &dyn Fn(Stage)) -> Result<
         }
         None => {
             on_stage(Stage::Transcribing);
-            let Recording { samples, sample_rate, .. } = job.recording;
-            let audio = prepare(&samples, sample_rate, cfg).ok_or(PipelineError::NoSpeech)?;
-            drop(samples);
-            if cfg.privacy.save_recordings {
-                save_recording(&audio);
-            }
-            let t = engines.stt.transcribe(&audio, &options(cfg))?;
-            if rules::is_hallucination(&t.text) && t.no_speech_prob > 0.4 {
-                return Err(PipelineError::NoSpeech);
-            }
-            (rules::strip_annotations(&t.text).trim().to_string(), t.language, t.elapsed_ms)
+            transcribe_recording(engines, job.recording, cfg)?
         }
     };
     if raw.is_empty() {
@@ -234,6 +224,21 @@ pub fn run(engines: &mut Engines, job: Job, on_stage: &dyn Fn(Stage)) -> Result<
     );
     engines.release_if_configured(cfg);
     Ok(Outcome { text, raw, language, provider, audio_ms, process_ms, notice })
+}
+
+/// Speech recognition for a finished recording: (text, language, milliseconds).
+fn transcribe_recording(engines: &mut Engines, recording: Recording, cfg: &Config) -> Result<(String, String, u64), PipelineError> {
+    let Recording { samples, sample_rate, .. } = recording;
+    let audio = prepare(&samples, sample_rate, cfg).ok_or(PipelineError::NoSpeech)?;
+    drop(samples);
+    if cfg.privacy.save_recordings {
+        save_recording(&audio);
+    }
+    let t = engines.stt.transcribe(&audio, &options(cfg))?;
+    if rules::is_hallucination(&t.text) && t.no_speech_prob > 0.4 {
+        return Err(PipelineError::NoSpeech);
+    }
+    Ok((rules::strip_annotations(&t.text).trim().to_string(), t.language, t.elapsed_ms))
 }
 
 fn save_recording(audio: &[f32]) {

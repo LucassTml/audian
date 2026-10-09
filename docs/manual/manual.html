@@ -74,7 +74,7 @@
   <h1>Audian</h1>
   <div class="sub">User &amp; Technical Manual</div>
   <div class="tag">Voice dictation for Windows — speak naturally and get polished text wherever you type. Private by default: everything runs on your PC.</div>
-  <div class="meta">Version 1.0.0 · October 2026</div>
+  <div class="meta">Version 1.1.0 · October 2026</div>
 </section>
 
 <h1 style="break-before: page">Contents</h1>
@@ -128,7 +128,7 @@ maintainable."</b> in AI Prompt mode.</p>
   <li><b>Private by default.</b> Speech recognition and rewriting run on your CPU. Nothing is sent anywhere unless you choose the Antigravity cloud provider.</li>
   <li><b>Invisible until needed.</b> The tray app idles at ~11 MB of RAM and 0 % CPU. The AI engines are separate processes that start when you press the shortcut and exit as soon as your text is inserted.</li>
   <li><b>Works everywhere you type.</b> Text is pasted through the clipboard, which every Windows app understands — editors, browsers, chat apps, Office, terminals — and your clipboard is restored afterwards.</li>
-  <li><b>Yours to style.</b> Six colour themes — Ivory (off-white, the default), Violet, Ocean, Mint, Sunset and Rose — for the window, the logo and the recording indicator, which can also be dark or light.</li>
+  <li><b>Yours to style.</b> Six colour themes — Ivory (off-white, the default), Violet, Ocean, Mint, Sunset and Rose — for the window, the logo and the recording indicator; a light or dark window (or one that follows Windows); and a dark or light indicator.</li>
   <li><b>Fails gracefully.</b> If the AI fails, a basic cleanup is inserted; if the window closed or is elevated, the text goes to your clipboard and a notification explains why.</li>
 </ul>
 
@@ -140,7 +140,7 @@ maintainable."</b> in AI Prompt mode.</p>
 
 <!-- ============================== 2 ============================== -->
 <h1><span class="num">2</span>Installing &amp; first run</h1>
-<p>Run <code>Audian-Setup-1.0.0-x64.exe</code>. It installs for your Windows account only, so no administrator
+<p>Run <code>Audian-Setup-1.1.0-x64.exe</code>. It installs for your Windows account only, so no administrator
 rights are needed (the same model as VS Code's user installer). Requirements: Windows 10 or 11, 64-bit x86 CPU with
 AVX2 (any Intel/AMD CPU from roughly 2015 on), 8 GB RAM recommended (4 GB works with the lighter models).</p>
 <figure class="half"><img src="img/setup.png" alt="Audian Setup"><figcaption>The installer. Options: location, start with Windows, desktop shortcut, and downloading the AI models (about 1.5 GB) during setup.</figcaption></figure>
@@ -148,7 +148,7 @@ AVX2 (any Intel/AMD CPU from roughly 2015 on), 8 GB RAM recommended (4 GB works 
 <h2>What the installer does</h2>
 <table>
   <tr><th>Step</th><th>Details</th></tr>
-  <tr><td>Files</td><td><code>%LOCALAPPDATA%\Programs\Audian</code>: <code>audian.exe</code> (tray app + window), <code>audian-stt.exe</code> (speech engine), <code>audian-llm.exe</code> (rewriting engine), <code>uninstall.exe</code>. About 29 MB.</td></tr>
+  <tr><td>Files</td><td><code>%LOCALAPPDATA%\Programs\Audian</code>: <code>audian.exe</code> (tray app + window), <code>audian-stt.exe</code> (Whisper speech engine), <code>audian-parakeet.exe</code> (Parakeet speech engine), <code>audian-llm.exe</code> (rewriting engine), <code>uninstall.exe</code>. About 50 MB.</td></tr>
   <tr><td>Shortcuts</td><td>Start Menu entry “Audian”; optional desktop shortcut.</td></tr>
   <tr><td>Registration</td><td>Listed in <i>Settings › Apps › Installed apps</i> with a working Uninstall button.</td></tr>
   <tr><td>Startup</td><td>Optional entry in your user's <i>Run</i> key (Audian starts in the tray when you sign in).</td></tr>
@@ -278,19 +278,20 @@ microphone, auto-stop and per-app toggles). All changes are saved and applied in
   <tr><td>Home</td><td>Status, words dictated, time saved vs typing, quick toggles, live engine usage, recent dictations.</td></tr>
   <tr><td>Shortcut &amp; recording</td><td>Shortcut editor with conflict check, recording style, auto-stop tuning, Esc-to-cancel, paste-last shortcut.</td></tr>
   <tr><td>Microphone &amp; sound</td><td>Device, live level meter, gain, voice-detection sensitivity, silence threshold, max length, sound cues.</td></tr>
-  <tr><td>Speech recognition</td><td>Whisper model, CPU threads, how long the model stays loaded, languages, custom vocabulary.</td></tr>
+  <tr><td>Speech recognition</td><td>Engine (Whisper or NVIDIA Parakeet), model, CPU threads, how long the model stays loaded, languages, custom vocabulary.</td></tr>
   <tr><td>Rewriting</td><td>AI on/off, default mode, provider, output language, custom instructions, fallback.</td></tr>
   <tr><td>Per-app modes</td><td>Automatic mode rules.</td></tr>
   <tr><td>Models</td><td>Download, switch and delete models; sizes, RAM and speed for each.</td></tr>
   <tr><td>History</td><td>Searchable recent dictations with what you originally said, timing and provider; copy or clear.</td></tr>
   <tr><td>General</td><td>Start with Windows, notifications, insertion method, clipboard restore, terminals.</td></tr>
-  <tr><td>Appearance</td><td>Colour theme (window, logo, indicator); recording indicator style, position and label, with a live preview.</td></tr>
+  <tr><td>Appearance</td><td>Light or dark window (or match Windows), colour theme (window, logo, indicator); recording indicator style, position and label, with a live preview.</td></tr>
   <tr><td>Privacy</td><td>Data-flow summary, history, recordings, transcript logging, statistics.</td></tr>
   <tr><td>About</td><td>Version, live resource usage, file locations.</td></tr>
 </table>
 <figure><img src="img/page_shortcut.png" alt="Shortcut" style="max-width:88%"><figcaption>Shortcut &amp; recording: the shortcut editor checks availability as you type.</figcaption></figure>
-<figure><img src="img/page_appearance.png" alt="Appearance" style="max-width:88%"><figcaption>Appearance: six themes that apply instantly, and the recording indicator in dark or light style.</figcaption></figure>
-<figure><img src="img/page_speech.png" alt="Speech recognition" style="max-width:88%"><figcaption>Speech recognition: model and how long it stays in memory — by default it exits right after each dictation.</figcaption></figure>
+<figure><img src="img/page_appearance.png" alt="Appearance" style="max-width:88%"><figcaption>Appearance: light or dark window, six themes that apply instantly, and the recording indicator in dark or light style.</figcaption></figure>
+<figure><img src="img/page_home_light.png" alt="Light mode" style="max-width:88%"><figcaption>The window in light mode. Accents switch to each theme's darker shade so they stay readable.</figcaption></figure>
+<figure><img src="img/page_speech.png" alt="Speech recognition" style="max-width:88%"><figcaption>Speech recognition: choose Whisper or NVIDIA Parakeet; the engine exits right after each dictation by default.</figcaption></figure>
 <figure><img src="img/page_models.png" alt="Models" style="max-width:88%"><figcaption>Models: download, switch and remove, with size, RAM and speed for each.</figcaption></figure>
 
 <!-- ============================== 8 ============================== -->
@@ -310,6 +311,7 @@ microphone, auto-stop and per-app toggles). All changes are saved and applied in
   <tr><th>Engine / model</th><th>Load time</th><th>Peak RAM</th><th>CPU while working</th><th>Speed</th><th>VRAM</th></tr>
   <tr><td>Speech: Whisper Small Q8 <span class="badge">default</span></td><td>0.45 s + 0.25 s warm-up (while you speak)</td><td><b>~450 MB</b></td><td>8 threads (~7 cores, ~30 % of this CPU)</td><td>6.6 s clip: 0.4–0.6 s<br>14.6 s clip: 1.0–1.4 s</td><td>0</td></tr>
   <tr><td>Speech: Whisper Large v3 Turbo Q5</td><td>2.2 s</td><td><b>777 MB</b></td><td>~7.6 cores</td><td>14.6 s clip: 4.4–7.9 s</td><td>0</td></tr>
+  <tr><td>Speech: NVIDIA Parakeet TDT 0.6B v3</td><td>1.5 s (while you speak)</td><td><b>~0.8 GB</b><br><span class="muted">0.7 GB private</span></td><td>8 threads</td><td>5.9 s clip: 0.2 s<br>14.6 s clip: 0.5 s</td><td>0</td></tr>
   <tr><td>Rewriting: Qwen 3.5 2B Q4 <span class="badge">default</span></td><td>0.5 s + 25 ms prompt restore from cache (while you speak)</td><td><b>1.4 GB</b><br><span class="muted">0.5 GB private</span></td><td>~5.4 cores</td><td>0.35–1.0 s per rewrite (~30 tokens/s)</td><td>0</td></tr>
   <tr><td>Rewriting: Antigravity</td><td>CLI start ≈4 s (hidden while you speak)</td><td>not measured (CLI process)</td><td>negligible (runs in the cloud)</td><td>4–8 s</td><td>0</td></tr>
 </table>
@@ -357,7 +359,19 @@ rewriting speed.</p>
 
 <!-- ============================== 9 ============================== -->
 <h1><span class="num">9</span>Models: what we chose and why</h1>
-<h2>Speech recognition — Whisper Small (Q8) by default</h2>
+<h2>Speech recognition — two engines</h2>
+<table>
+  <tr><th>Engine</th><th>Where it runs</th><th>RAM while working</th><th>Languages</th><th>Choose it when…</th></tr>
+  <tr><td><b>Whisper</b> (default)</td><td>Your CPU, offline</td><td>0.25–0.8 GB by model</td><td>99, custom vocabulary</td><td>you speak a non-European language or need the glossary</td></tr>
+  <tr><td><b>NVIDIA Parakeet TDT 0.6B v3</b></td><td>Your CPU, offline (ONNX Runtime)</td><td>~0.8 GB</td><td>25 European, detected automatically</td><td>you want the fastest and most accurate local recognition</td></tr>
+</table>
+<p><b>Parakeet</b> is a 600M-parameter FastConformer with a Token-and-Duration Transducer decoder: it predicts each
+word piece together with how many audio frames to skip, so it is non-autoregressive in practice and very fast. On this
+PC it transcribes 15 s of speech in about 0.5 s (Whisper Small: about 1.4 s), adds punctuation by itself and rarely
+invents text during silence. It covers 25 European languages (English, Portuguese, Spanish, French, German, Italian,
+Dutch, Polish, Russian, Ukrainian and more). Audian runs NVIDIA's model (CC-BY-4.0) from an int8 ONNX export
+(670 MB, downloaded from the Models page) in its own engine process, like Whisper.</p>
+<h3>Whisper models</h3>
 <p>Whisper (OpenAI, MIT licence) running through whisper.cpp is the most mature offline speech engine on Windows,
 handles 99 languages including Portuguese, and needs no GPU. On a CPU the decisive factor is speed:</p>
 <table>
@@ -371,9 +385,8 @@ handles 99 languages including Portuguese, and needs no GPU. On a CPU the decisi
 <p class="muted">* Word error rate on the FLEURS Portuguese test set (public benchmark at Q8, lower is better).</p>
 <p><b>Why Small:</b> it is 4–6× faster than Large v3 Turbo on this CPU while being good enough for clean dictation —
 and the rewriting step fixes most remaining recognition slips (“end” → “and”). Turbo is the better choice once speed
-is not limiting (e.g. a GPU build). <b>Worth adding next:</b> NVIDIA <i>Parakeet TDT 0.6B v3</i> (ONNX) is roughly
-2× faster than Small on CPU with Turbo-like accuracy (~5 % Portuguese error rate) for 25 European languages — it would
-plug in behind the same <code>TranscriptionProvider</code> interface but requires the ONNX Runtime.</p>
+is not limiting (e.g. a GPU build). For English and Portuguese, Parakeet is now the faster and more accurate local
+choice; Whisper stays the default because it covers every language and supports the custom vocabulary.</p>
 
 <h2>Rewriting — Qwen 3.5 2B (Q4_K_M) by default</h2>
 <table>
@@ -403,7 +416,8 @@ appears in the app as a “custom” model.</p>
   <tr><th>Process</th><th>Role</th><th>Technology</th></tr>
   <tr><td><code>audian.exe</code> (tray)</td><td>Hotkeys, recording, voice detection, overlay, tray, insertion, orchestration</td><td>Rust; raw Win32 message loop; WASAPI via cpal; tiny-skia + fontdue rendering</td></tr>
   <tr><td><code>audian.exe --settings</code></td><td>The Audian window</td><td>egui (OpenGL), separate short-lived process</td></tr>
-  <tr><td><code>audian-stt.exe</code></td><td>Speech recognition</td><td>whisper.cpp (ggml, AVX2)</td></tr>
+  <tr><td><code>audian-stt.exe</code></td><td>Speech recognition (Whisper)</td><td>whisper.cpp (ggml, AVX2)</td></tr>
+  <tr><td><code>audian-parakeet.exe</code></td><td>Speech recognition (Parakeet)</td><td>ONNX Runtime 1.28, statically linked; greedy TDT decoding</td></tr>
   <tr><td><code>audian-llm.exe</code></td><td>Local rewriting</td><td>llama.cpp (ggml, AVX2, no OpenMP)</td></tr>
   <tr><td><code>agy.exe</code> (optional)</td><td>Cloud rewriting through Antigravity</td><td>Antigravity CLI with a tool-less custom agent</td></tr>
 </table>
@@ -470,7 +484,7 @@ The CLI is started in streaming mode when you press the shortcut, so its start-u
 <h1><span class="num">11</span>Privacy &amp; your data</h1>
 <table>
   <tr><th>Data</th><th>Where it goes</th><th>Stored?</th></tr>
-  <tr><td>Microphone audio</td><td>Memory of the tray app → speech engine (local pipe)</td><td>No. Optional “Keep audio recordings” saves WAV files (off by default).</td></tr>
+  <tr><td>Microphone audio</td><td>Memory of the tray app → speech engine (local pipe).</td><td>No. Optional “Keep audio recordings” saves WAV files (off by default).</td></tr>
   <tr><td>Transcript &amp; final text</td><td>Local engines; or Antigravity if you selected it</td><td>History (text only, last 200, can be turned off/cleared). Not logged unless you enable transcript logging.</td></tr>
   <tr><td>Window title</td><td>Used in memory to match per-app modes</td><td>Never stored or logged.</td></tr>
   <tr><td>Statistics</td><td>Counters only (dictations, words, seconds)</td><td><code>stats.json</code>; resettable.</td></tr>
@@ -526,8 +540,10 @@ audian-llm.exe --bench Qwen3.5-2B-Q4_K_M.gguf - "um so I want to fix the the bug
   <tr><td>auto_stop · smart / unfinished_extra_secs / no_speech_secs</td><td>true / 1.5 / 8.0</td><td>Sentence-aware waiting</td></tr>
   <tr><td>audio · device_id / device_name</td><td>"" (system default)</td><td>Microphone</td></tr>
   <tr><td>audio · gain / vad_sensitivity / silence_threshold / max_duration_secs</td><td>1.0 / 0.5 / 0.006 / 300</td><td>Input processing</td></tr>
+  <tr><td>transcription · provider</td><td>"whisper_local"</td><td>whisper_local · parakeet</td></tr>
   <tr><td>transcription · language / auto_languages / vocabulary</td><td>"auto" / [] / []</td><td>Recognition language(s), glossary</td></tr>
   <tr><td>transcription.whisper · model / threads / keep_loaded_minutes</td><td>"ggml-small-q8_0.bin" / 0 / 0</td><td>0 threads = auto; 0 minutes = unload right after use</td></tr>
+  <tr><td>transcription.parakeet · model / threads / keep_loaded_minutes</td><td>"parakeet-tdt-0.6b-v3-int8" / 0 / 0</td><td>Model folder in the models directory</td></tr>
   <tr><td>processing · enabled / mode / provider</td><td>true / "natural" / "local_llm"</td><td>Rewriting on/off, default mode, provider (local_llm · antigravity · rules)</td></tr>
   <tr><td>processing · custom_instructions / output_language / fallback_to_rules</td><td>"" / "same" / true</td><td>Extra instructions; translation target</td></tr>
   <tr><td>processing.local_llm · model / threads / keep_loaded_minutes / max_output_tokens / timeout_secs</td><td>"Qwen3.5-2B-Q4_K_M.gguf" / 0 / 0 / 768 / 45</td><td>Local rewriting engine</td></tr>
@@ -536,7 +552,7 @@ audian-llm.exe --bench Qwen3.5-2B-Q4_K_M.gguf - "um so I want to fix the the bug
   <tr><td>insertion · method / restore_clipboard / restore_delay_ms</td><td>"paste" / true / 600</td><td>How text is inserted</td></tr>
   <tr><td>insertion · terminal_single_line / trailing_space</td><td>true / false</td><td>Formatting</td></tr>
   <tr><td>overlay · position / show_label / style</td><td>"auto" / true / "dark"</td><td>auto · bottom_center · top_center; dark · light</td></tr>
-  <tr><td>appearance · theme</td><td>"ivory"</td><td>ivory · violet · ocean · mint · sunset · rose</td></tr>
+  <tr><td>appearance · theme / mode</td><td>"ivory" / "dark"</td><td>ivory · violet · ocean · mint · sunset · rose; dark · light · system</td></tr>
   <tr><td>privacy · history / history_limit / save_recordings / log_transcripts</td><td>true / 200 / false / false</td><td>Stored data</td></tr>
 </table>
 
@@ -545,7 +561,7 @@ audian-llm.exe --bench Qwen3.5-2B-Q4_K_M.gguf - "um so I want to fix the the bug
 <p>Requirements: Rust (MSVC toolchain), Visual Studio 2022 Build Tools with <i>C++ build tools</i>, <i>Windows 11 SDK</i>
 and <i>C++ Clang Compiler for Windows</i>, plus CMake.</p>
 <pre>.\scripts\build.ps1        # app and engines  → target\release
-.\scripts\package.ps1      # + installer      → dist\Audian-Setup-1.0.0-x64.exe (prints size and SHA-256)
+.\scripts\package.ps1      # + installer      → dist\Audian-Setup-1.1.0-x64.exe (prints size and SHA-256)
 cargo test --release       # unit tests (config, IPC, VAD, auto-stop, hotkeys, DSP, rules, sanitizer)</pre>
 <table>
   <tr><th>Crate</th><th>Role</th></tr>

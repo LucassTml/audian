@@ -54,6 +54,17 @@ impl ThemeId {
     }
 }
 
+/// Light or dark window.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowMode {
+    #[default]
+    Dark,
+    Light,
+    /// Follow Windows' app mode (Settings › Personalization › Colors).
+    System,
+}
+
 /// Background of the recording indicator ("pill").
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]

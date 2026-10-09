@@ -1,6 +1,6 @@
 //! Appearance: colour theme of this window and the recording indicator.
 
-use audian_common::config::{IndicatorStyle, OverlayPosition, ThemeId};
+use audian_common::config::{IndicatorStyle, OverlayPosition, ThemeId, WindowMode};
 use eframe::egui::{self, Align2, Color32, RichText, Sense, pos2, vec2};
 
 use super::super::theme::{self, icon, *};
@@ -13,6 +13,15 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
     w::page_header(ui, "Appearance", "Colours for this window, the logo and the recording indicator.");
     w::card(ui, |ui| {
         w::card_title(ui, icon::PALETTE, "Theme", "Applies instantly.");
+        w::row(ui, "Window", "Light or dark, or follow Windows' app mode.", |ui| {
+            w::segmented(
+                ui,
+                egui::Id::new("win-mode"),
+                &mut app.draft.appearance.mode,
+                &[(WindowMode::Dark, "Dark"), (WindowMode::Light, "Light"), (WindowMode::System, "Match Windows")],
+            );
+        });
+        w::divider(ui);
         let per_row = tiles_per_row(ui);
         let tw = tile_width(ui, per_row);
         for row in ThemeId::ALL.chunks(per_row) {
@@ -20,7 +29,9 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
                 for &t in row {
                     let pal = t.palette();
                     let selected = app.draft.appearance.theme == t;
-                    let resp = w::theme_tile(ui, vec2(tw, 92.0), t.label(), t.description(), theme::rgb(pal.accent), theme::rgb(pal.accent_2), selected);
+                    // On light surfaces each theme's darker "ink" colours are the ones in use.
+                    let (a, b) = if theme::is_light() { (pal.ink, pal.ink_2) } else { (pal.accent, pal.accent_2) };
+                    let resp = w::theme_tile(ui, vec2(tw, 92.0), t.label(), t.description(), theme::rgb(a), theme::rgb(b), selected);
                     if resp.clicked() {
                         app.draft.appearance.theme = t;
                     }
@@ -40,7 +51,7 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
             w::segmented(ui, egui::Id::new("ov-style"), &mut app.draft.overlay.style, &[(IndicatorStyle::Dark, "Dark"), (IndicatorStyle::Light, "Light")]);
         });
         w::divider(ui);
-        ui.label(RichText::new("Position").size(14.5).color(TEXT));
+        ui.label(RichText::new("Position").size(14.5).color(text()));
         w::segmented(
             ui,
             egui::Id::new("ov-pos"),
@@ -78,7 +89,7 @@ fn indicator_preview(app: &mut SettingsApp, ui: &mut egui::Ui) {
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 12.0, Color32::from_rgb(58, 61, 78));
     painter.rect_filled(rect.shrink2(vec2(0.0, rect.height() * 0.5)).translate(vec2(0.0, rect.height() * 0.25)), 12.0, Color32::from_white_alpha(6));
-    painter.rect_stroke(rect, 12.0, egui::Stroke::new(1.0, BORDER), egui::StrokeKind::Inside);
+    painter.rect_stroke(rect, 12.0, egui::Stroke::new(1.0, border()), egui::StrokeKind::Inside);
 
     let sizes: Vec<egui::Vec2> = textures.iter().map(|t| t.size_vec2() / ppp).collect();
     let gap = 28.0;

@@ -1,7 +1,7 @@
 //! Exercises the model downloader against any URL (used with a local HTTP server in tests).
 //! usage: download_test <url> <file-name> <size> <sha256>
 
-use audian_common::catalog::{ModelInfo, ModelKind};
+use audian_common::catalog::{Engine, ModelInfo, ModelKind};
 use audian_common::download::{self, State};
 
 fn main() {
@@ -9,11 +9,13 @@ fn main() {
     let leak = |s: &str| -> &'static str { Box::leak(s.to_string().into_boxed_str()) };
     let model: &'static ModelInfo = Box::leak(Box::new(ModelInfo {
         kind: ModelKind::Speech,
+        engine: Engine::Whisper,
         name: "test",
         file: leak(&a[2]),
         url: leak(&a[1]),
         size: a[3].parse().unwrap(),
         sha256: leak(&a[4]),
+        parts: &[],
         ram_mb: 0,
         speed: "",
         summary: "",

@@ -96,8 +96,8 @@ impl Setup {
             }
             ui.vertical(|ui| {
                 ui.add_space(4.0);
-                ui.label(RichText::new(title).font(theme::semibold(26.0)).color(TEXT));
-                ui.label(RichText::new(subtitle).size(14.0).color(TEXT_DIM));
+                ui.label(RichText::new(title).font(theme::semibold(26.0)).color(text()));
+                ui.label(RichText::new(subtitle).size(14.0).color(text_dim()));
             });
         });
         ui.add_space(18.0);
@@ -133,13 +133,13 @@ impl Setup {
                     },
                 );
             } else {
-                w::row(ui, "AI models", "Already installed on this PC.", |ui| w::badge(ui, "Ready", SUCCESS));
+                w::row(ui, "AI models", "Already installed on this PC.", |ui| w::badge(ui, "Ready", success()));
             }
         });
         ui.add_space(10.0);
         w::hint(ui, "Audian runs speech recognition and rewriting on your own CPU. Nothing you say is sent anywhere unless you enable a cloud provider.");
         if !install::has_payload() {
-            ui.label(RichText::new("This installer was built without the application files.").color(WARN));
+            ui.label(RichText::new("This installer was built without the application files.").color(warn()));
         }
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Max), |ui| {
             ui.horizontal(|ui| {
@@ -179,12 +179,12 @@ impl Setup {
                     let p = ui.painter();
                     match state {
                         StepState::Done => {
-                            p.circle_filled(r.center(), 10.0, SUCCESS.linear_multiply(0.2));
-                            p.text(r.center(), egui::Align2::CENTER_CENTER, icon::CHECK, theme::icons(11.0), SUCCESS);
+                            p.circle_filled(r.center(), 10.0, success().linear_multiply(0.2));
+                            p.text(r.center(), egui::Align2::CENTER_CENTER, icon::CHECK, theme::icons(11.0), success());
                         }
                         StepState::Running => {
                             let t = ui.input(|i| i.time) as f32;
-                            p.circle_stroke(r.center(), 8.0, egui::Stroke::new(2.0, BORDER));
+                            p.circle_stroke(r.center(), 8.0, egui::Stroke::new(2.0, border()));
                             let a0 = t * 5.0;
                             let pts: Vec<egui::Pos2> = (0..12).map(|k| {
                                 let a = a0 + k as f32 * 0.13;
@@ -193,10 +193,10 @@ impl Setup {
                             p.add(egui::Shape::line(pts, egui::Stroke::new(2.0, accent())));
                         }
                         StepState::Pending => {
-                            p.circle_stroke(r.center(), 8.0, egui::Stroke::new(1.5, BORDER));
+                            p.circle_stroke(r.center(), 8.0, egui::Stroke::new(1.5, border()));
                         }
                     }
-                    let color = if *state == StepState::Pending { TEXT_FAINT } else { TEXT };
+                    let color = if *state == StepState::Pending { text_faint() } else { text() };
                     ui.label(RichText::new(label).size(14.5).color(color));
                 });
             }
@@ -204,16 +204,16 @@ impl Setup {
                 ui.add_space(6.0);
                 let name = catalog::find(d.file).map(|m| m.name).unwrap_or(d.file);
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new(format!("Downloading {name}")).size(14.0).color(TEXT));
+                    ui.label(RichText::new(format!("Downloading {name}")).size(14.0).color(text()));
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| match d.state() {
-                        State::Done => w::badge(ui, "Done", SUCCESS),
+                        State::Done => w::badge(ui, "Done", success()),
                         State::Verifying => w::badge(ui, "Verifying", accent()),
                         State::Failed(e) => {
-                            ui.label(RichText::new(e).size(12.0).color(WARN));
+                            ui.label(RichText::new(e).size(12.0).color(warn()));
                         }
-                        State::Cancelled => w::badge(ui, "Skipped", TEXT_DIM),
+                        State::Cancelled => w::badge(ui, "Skipped", text_dim()),
                         State::Downloading => {
-                            ui.label(RichText::new(format!("{} / {}", catalog::format_size(d.received()), catalog::format_size(d.total))).size(12.5).color(TEXT_DIM));
+                            ui.label(RichText::new(format!("{} / {}", catalog::format_size(d.received()), catalog::format_size(d.total))).size(12.5).color(text_dim()));
                         }
                     });
                 });
@@ -222,7 +222,7 @@ impl Setup {
         });
         if let Some(e) = &error {
             ui.add_space(10.0);
-            ui.label(RichText::new(format!("Installation failed: {e}")).color(WARN));
+            ui.label(RichText::new(format!("Installation failed: {e}")).color(warn()));
             if w::secondary(ui, "Try again").clicked() {
                 self.start_install();
             }
@@ -250,17 +250,17 @@ impl Setup {
         self.header(ui, "Audian is ready", "Installed for your account.");
         w::card(ui, |ui| {
             let shortcut = audian_common::config::Config::load().hotkey.shortcut;
-            ui.label(RichText::new("How to dictate").font(theme::semibold(16.0)).color(TEXT));
+            ui.label(RichText::new("How to dictate").font(theme::semibold(16.0)).color(text()));
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Press").size(14.5).color(TEXT_DIM));
+                ui.label(RichText::new("Press").size(14.5).color(text_dim()));
                 w::keycaps(ui, &shortcut, 13.0);
-                ui.label(RichText::new("in any text field, speak, then release — or tap and simply pause.").size(14.5).color(TEXT_DIM));
+                ui.label(RichText::new("in any text field, speak, then release — or tap and simply pause.").size(14.5).color(text_dim()));
             });
             ui.add_space(4.0);
             w::hint(ui, "Audian lives in the system tray. Left-click its icon to open the dashboard; right-click for quick options.");
             if self.downloads.iter().any(|d| matches!(d.state(), State::Failed(_) | State::Cancelled)) || (!self.models && catalog::recommended().any(|m| !catalog::is_installed(m))) {
                 ui.add_space(4.0);
-                ui.label(RichText::new("Models still need to be downloaded — Audian will guide you on first launch.").size(13.0).color(WARN));
+                ui.label(RichText::new("Models still need to be downloaded — Audian will guide you on first launch.").size(13.0).color(warn()));
             }
         });
         ui.add_space(10.0);
@@ -290,7 +290,7 @@ impl Setup {
             );
         });
         if let Some(e) = &self.error {
-            ui.label(RichText::new(e).color(WARN));
+            ui.label(RichText::new(e).color(warn()));
         }
         ui.with_layout(egui::Layout::bottom_up(egui::Align::Max), |ui| {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -328,7 +328,7 @@ impl eframe::App for Setup {
             self.logo = Some(ctx.load_texture("logo", img, egui::TextureOptions::LINEAR));
         }
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(BG).inner_margin(Margin::symmetric(34, 30)))
+            .frame(egui::Frame::new().fill(bg()).inner_margin(Margin::symmetric(34, 30)))
             .show(ui, |ui| match self.screen {
                 Screen::Welcome => self.welcome(ui, &ctx),
                 Screen::Installing => self.installing(ui),

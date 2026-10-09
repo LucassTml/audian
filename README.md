@@ -26,8 +26,9 @@ shortcut in any app, talk the way you normally talk ("um, so basically I want to
 login bug, no wait, the signup bug"), and a clean version of what you *meant* is typed for you,
 in ChatGPT, Claude, VS Code, Word, Slack, Outlook, a browser or a terminal.
 
-Unlike cloud dictation tools, Audian runs **Whisper** (speech-to-text) and a small **Qwen** language
-model (rewriting) **locally**, with no account, no subscription and no audio leaving your PC.
+Unlike cloud dictation tools, Audian runs speech recognition (**Whisper** or **NVIDIA Parakeet**) and a
+small **Qwen** language model (rewriting) **locally**, with no account, no subscription and no audio
+leaving your PC.
 
 > Audian is an independent project. It is not affiliated with, endorsed by or connected to
 > Wispr Flow or its makers; it is simply inspired by the idea.
@@ -40,22 +41,24 @@ model (rewriting) **locally**, with no account, no subscription and no audio lea
   no, Wednesday" → "Wednesday"), fixes punctuation, and keeps your language and your voice.
 - 🧠 **Six writing modes.** Natural, AI Prompt, Professional, Document, Literal and Custom. Per-app
   rules pick one automatically: AI Prompt in ChatGPT or VS Code, Professional in Outlook, and so on.
-- 🔒 **Private by default.** whisper.cpp and llama.cpp run on the CPU. Nothing is sent anywhere
-  unless you opt in to the cloud provider (Antigravity).
+- 🔒 **Private by default.** whisper.cpp, Parakeet and llama.cpp run on the CPU. Nothing is sent
+  anywhere unless you opt in to the cloud rewriting provider (Antigravity).
+- 🎧 **Two speech engines.** Whisper (99 languages) or NVIDIA Parakeet (faster and more accurate,
+  25 European languages), both offline on your CPU.
 - 🪶 **Light.** The tray app idles at about 11 MB of RAM and 0 % CPU. The AI engines load while you
   speak and exit as soon as your text is inserted.
 - ⚡ **Fast.** Usually 0.5 to 2 s from the end of your sentence to text on screen, on CPU only.
 - 🌍 **Multilingual.** 99 languages for recognition, bilingual auto-detection, and
   translate-as-you-dictate (speak Portuguese, get English).
-- 🎨 **Themes.** Six colour themes (Ivory, Violet, Ocean, Mint, Sunset, Rose) for the window, the
-  logo and the recording indicator, which can be dark or light.
+- 🎨 **Themes and light mode.** Six colour themes (Ivory, Violet, Ocean, Mint, Sunset, Rose), a light
+  or dark window (or follow Windows), and a dark or light recording indicator.
 - 📋 **Clipboard-safe.** Your clipboard is restored after pasting, and dictated text is kept out of
   Windows clipboard history.
 - 🕘 **History and stats.** Recent dictations (text only, never audio), words dictated, time saved.
 
 ## Download
 
-Get **[Audian-Setup-1.0.0-x64.exe](https://github.com/LucassTml/audian/releases/latest)** from the
+Get **[Audian-Setup-1.1.0-x64.exe](https://github.com/LucassTml/audian/releases/latest)** from the
 Releases page and run it.
 
 - Installs for your Windows account only, so no administrator rights are needed.
@@ -68,7 +71,7 @@ Releases page and run it.
 > PC". Choose **More info › Run anyway**. You can check the download against the SHA-256 listed
 > in the release notes.
 
-Silent install: `Audian-Setup-1.0.0-x64.exe --quiet [--with-models] [--no-autostart] [--no-launch] [--desktop-shortcut]`.
+Silent install: `Audian-Setup-1.1.0-x64.exe --quiet [--with-models] [--no-autostart] [--no-launch] [--desktop-shortcut]`.
 Uninstall from *Settings › Apps*, or run `uninstall.exe --uninstall [--quiet] [--purge]`.
 
 ## How to use
@@ -96,14 +99,19 @@ A small indicator follows your text cursor while you dictate:
   <sub>Six themes. Ivory (off-white) is the default.</sub>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/home-light.png" width="860" alt="Light mode"><br>
+  <sub>Light mode.</sub>
+</p>
+
 | | |
 |---|---|
 | <img src="docs/screenshots/appearance.png" alt="Appearance"> | <img src="docs/screenshots/rewriting.png" alt="Rewriting modes"> |
-| **Appearance:** theme and recording indicator, with a live preview | **Rewriting:** modes and AI provider |
+| **Appearance:** light or dark window, theme and recording indicator, with a live preview | **Rewriting:** modes and AI provider |
 | <img src="docs/screenshots/models.png" alt="Models"> | <img src="docs/screenshots/history.png" alt="History"> |
 | **Models:** download, switch and remove, with RAM and speed for each | **History:** what you said and what was typed |
 | <img src="docs/screenshots/speech.png" alt="Speech recognition"> | <img src="docs/screenshots/setup.png" alt="Installer"> |
-| **Speech recognition:** model, languages, and how long it stays in memory | **Installer:** per-user, optional model download |
+| **Speech recognition:** Whisper or NVIDIA Parakeet | **Installer:** per-user, optional model download |
 
 ## How it works
 
@@ -114,8 +122,8 @@ A small indicator follows your text cursor while you dictate:
                            auto-stop                              or simple rules
 ```
 
-- **Separate engine processes.** Speech (`audian-stt`, whisper.cpp) and rewriting (`audian-llm`,
-  llama.cpp) run as helper processes. They start when you press the shortcut, load while you
+- **Separate engine processes.** Speech (`audian-stt` with whisper.cpp, or `audian-parakeet` with
+  ONNX Runtime) and rewriting (`audian-llm`, llama.cpp) run as helper processes. They start when you press the shortcut, load while you
   speak, and exit after the dictation, so their memory goes straight back to Windows.
 - **Smart end-of-speech detection.** During pauses Audian transcribes what it has so far. If the
   sentence sounds unfinished ("…and", "because", "e"), it waits longer. The preview is reused, so
@@ -130,7 +138,8 @@ A small indicator follows your text cursor while you dictate:
 | Engine | Model | Disk | RAM while working | Speed |
 |---|---|---|---|---|
 | Speech | Whisper Small Q8 (default) | 264 MB | ~450 MB | 0.4–1.4 s per sentence |
-| Speech | Whisper Large v3 Turbo Q5 | 574 MB | ~780 MB | 3–8 s, most accurate |
+| Speech | Whisper Large v3 Turbo Q5 | 574 MB | ~780 MB | 3–8 s, most accurate Whisper |
+| Speech | NVIDIA Parakeet TDT 0.6B v3 (int8) | 671 MB | ~0.8 GB | 0.2–0.5 s, 25 European languages |
 | Rewriting | Qwen 3.5 2B Q4_K_M (default) | 1.28 GB | ~1.4 GB (0.5 GB private) | 0.4–1 s per rewrite |
 | Rewriting | Qwen 3.5 0.8B / 4B, Llama 3.2 3B | 0.5–2.7 GB | 0.7–2.9 GB | optional |
 
@@ -170,8 +179,9 @@ build of whisper.cpp is about 25× slower.
 |---|---|
 | `audian` | Tray app, recording indicator and the Audian window (`--settings`) |
 | `audian-stt` | Speech engine process (whisper.cpp) |
+| `audian-parakeet` | Speech engine process (NVIDIA Parakeet on ONNX Runtime) |
 | `audian-llm` | Rewriting engine process (llama.cpp) |
-| `audian-setup` | Installer and uninstaller (embeds the three above) |
+| `audian-setup` | Installer and uninstaller (embeds the engines above) |
 | `audian-common` | Config, themes, model catalog, downloader, history, IPC, logging |
 | `audian-ui` | Design system: theme and animated widgets |
 | `audian-art` | Vector artwork: logo and tray glyphs |
@@ -182,12 +192,13 @@ build of whisper.cpp is about 25× slower.
 
 | Command | Purpose |
 |---|---|
-| `audian.exe --transcribe <wav> [--mode ai_prompt] [--provider antigravity] [--output en]` | Full pipeline on a recording |
+| `audian.exe --transcribe <wav> [--stt parakeet] [--mode ai_prompt] [--provider antigravity] [--output en]` | Full pipeline on a recording |
 | `audian.exe --rewrite-file <lines.txt> [--mode m] [--output en]` | Rewrite each line (`pt\|` prefix = Portuguese) |
 | `audian.exe --list-devices` | Microphones and their ids |
 | `audian.exe --reload` | Re-read `config.toml` after manual edits |
 | `audian.exe --export-art <dir>` | Logo and recording-indicator images for every theme |
-| `audian-stt.exe --bench <model> <16kHz.wav> [threads] [lang] [en,pt]` | Speech benchmark |
+| `audian-stt.exe --bench <model> <16kHz.wav> [threads] [lang] [en,pt]` | Speech benchmark (Whisper) |
+| `audian-parakeet.exe --bench <model-folder> <16kHz.wav> [threads] [en,pt]` | Speech benchmark (Parakeet) |
 | `audian-llm.exe --bench <model> - "<text>"` | Rewriting benchmark |
 
 Output appears only when redirected (GUI-subsystem executables). Logs are in
@@ -200,6 +211,7 @@ Output appears only when redirected (GUI-subsystem executables). Logs are in
 Audian stands on the shoulders of
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp) and [llama.cpp](https://github.com/ggml-org/llama.cpp) (ggml, MIT),
 OpenAI's [Whisper](https://github.com/openai/whisper) models (MIT),
+NVIDIA's [Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) via [ONNX Runtime](https://github.com/microsoft/onnxruntime) (MIT) and [ort](https://github.com/pykeio/ort),
 [Qwen](https://huggingface.co/Qwen) models (Apache 2.0),
 [egui](https://github.com/emilk/egui), [tiny-skia](https://github.com/linebender/tiny-skia),
 [cpal](https://github.com/RustAudio/cpal) and [windows-rs](https://github.com/microsoft/windows-rs).

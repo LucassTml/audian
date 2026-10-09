@@ -78,7 +78,7 @@ impl Monitor {
                 let pid = entry.th32ProcessID;
                 let slot = match name.as_str() {
                     "audian.exe" if pid == daemon_pid => Some(&mut snap.tray),
-                    "audian-stt.exe" => Some(&mut snap.speech),
+                    "audian-stt.exe" | "audian-parakeet.exe" => Some(&mut snap.speech),
                     "audian-llm.exe" => Some(&mut snap.rewrite),
                     _ => None,
                 };

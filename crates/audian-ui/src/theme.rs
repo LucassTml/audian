@@ -4,27 +4,161 @@
 //! Icons), so the app looks native without bundling any font files; egui's defaults remain
 //! as fallbacks.
 //!
-//! Surfaces and text are constants; the accent family comes from the selected theme
-//! ([`set_theme`]) and is read through functions such as [`accent`].
+//! Colours are read through functions such as [`text`] and [`accent`]: surfaces and text follow
+//! the light or dark mode ([`set_light`]), the accent family follows the theme ([`set_theme`]).
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 use audian_common::theme::{Palette, Rgb, ThemeId};
 use eframe::egui::{self, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Stroke, Vec2};
 
-pub const BG: Color32 = Color32::from_rgb(14, 15, 19);
-pub const SIDEBAR: Color32 = Color32::from_rgb(18, 19, 24);
-pub const CARD: Color32 = Color32::from_rgb(23, 24, 31);
-pub const CARD_HOVER: Color32 = Color32::from_rgb(28, 29, 38);
-pub const INSET: Color32 = Color32::from_rgb(16, 17, 22);
-pub const BORDER: Color32 = Color32::from_rgb(36, 37, 48);
-pub const TEXT: Color32 = Color32::from_rgb(236, 236, 242);
-pub const TEXT_DIM: Color32 = Color32::from_rgb(162, 163, 179);
-pub const TEXT_FAINT: Color32 = Color32::from_rgb(109, 110, 125);
-pub const SUCCESS: Color32 = Color32::from_rgb(63, 208, 139);
-pub const WARN: Color32 = Color32::from_rgb(255, 184, 77);
-pub const DANGER: Color32 = Color32::from_rgb(255, 93, 93);
+/// Surface, text and control colours of one mode.
+pub struct Surfaces {
+    pub bg: Color32,
+    pub sidebar: Color32,
+    pub card: Color32,
+    pub card_hover: Color32,
+    pub inset: Color32,
+    pub border: Color32,
+    pub text: Color32,
+    pub text_dim: Color32,
+    pub text_faint: Color32,
+    pub success: Color32,
+    pub warn: Color32,
+    pub danger: Color32,
+    /// Resting fill of controls (secondary buttons, switches when off).
+    pub control: Color32,
+    pub control_hover: Color32,
+    pub control_border: Color32,
+    /// Behind a selected / hovered navigation item.
+    pub selected: Color32,
+    pub hovered: Color32,
+    /// Danger button: fill, hover fill, border.
+    pub danger_fill: Color32,
+    pub danger_hover: Color32,
+    pub danger_border: Color32,
+    /// Keyboard keycaps: face, edge, bottom shadow.
+    pub cap: Color32,
+    pub cap_edge: Color32,
+    pub cap_shadow: Color32,
+    /// Multiplier for drop-shadow opacity (shadows are subtler on light surfaces).
+    pub shadow: f32,
+}
+
+pub const DARK: Surfaces = Surfaces {
+    bg: Color32::from_rgb(14, 15, 19),
+    sidebar: Color32::from_rgb(18, 19, 24),
+    card: Color32::from_rgb(23, 24, 31),
+    card_hover: Color32::from_rgb(28, 29, 38),
+    inset: Color32::from_rgb(16, 17, 22),
+    border: Color32::from_rgb(36, 37, 48),
+    text: Color32::from_rgb(236, 236, 242),
+    text_dim: Color32::from_rgb(162, 163, 179),
+    text_faint: Color32::from_rgb(109, 110, 125),
+    success: Color32::from_rgb(63, 208, 139),
+    warn: Color32::from_rgb(255, 184, 77),
+    danger: Color32::from_rgb(255, 93, 93),
+    control: Color32::from_rgb(36, 37, 49),
+    control_hover: Color32::from_rgb(46, 47, 62),
+    control_border: Color32::from_rgb(62, 63, 82),
+    selected: Color32::from_rgb(26, 27, 34),
+    hovered: Color32::from_rgb(30, 31, 40),
+    danger_fill: Color32::from_rgb(58, 28, 32),
+    danger_hover: Color32::from_rgb(80, 34, 40),
+    danger_border: Color32::from_rgb(96, 44, 50),
+    cap: Color32::from_rgb(40, 41, 54),
+    cap_edge: Color32::from_rgb(62, 63, 82),
+    cap_shadow: Color32::from_rgb(12, 12, 16),
+    shadow: 1.0,
+};
+
+pub const LIGHT: Surfaces = Surfaces {
+    bg: Color32::from_rgb(244, 242, 237),
+    sidebar: Color32::from_rgb(236, 233, 227),
+    card: Color32::from_rgb(255, 255, 255),
+    card_hover: Color32::from_rgb(250, 249, 246),
+    inset: Color32::from_rgb(238, 236, 231),
+    border: Color32::from_rgb(224, 220, 212),
+    text: Color32::from_rgb(28, 28, 32),
+    text_dim: Color32::from_rgb(88, 88, 98),
+    text_faint: Color32::from_rgb(132, 131, 140),
+    success: Color32::from_rgb(20, 138, 84),
+    warn: Color32::from_rgb(178, 102, 0),
+    danger: Color32::from_rgb(200, 50, 50),
+    control: Color32::from_rgb(234, 231, 225),
+    control_hover: Color32::from_rgb(224, 221, 214),
+    control_border: Color32::from_rgb(208, 204, 196),
+    selected: Color32::from_rgb(225, 222, 215),
+    hovered: Color32::from_rgb(230, 227, 221),
+    danger_fill: Color32::from_rgb(253, 236, 236),
+    danger_hover: Color32::from_rgb(250, 222, 222),
+    danger_border: Color32::from_rgb(238, 190, 190),
+    cap: Color32::from_rgb(255, 255, 255),
+    cap_edge: Color32::from_rgb(212, 208, 200),
+    cap_shadow: Color32::from_rgb(204, 200, 192),
+    shadow: 0.35,
+};
+
+/// The home banner stays dark in both modes; this is the colour it is blended from.
+pub const BANNER_BASE: Color32 = Color32::from_rgb(14, 15, 19);
+
+static LIGHT_MODE: AtomicBool = AtomicBool::new(false);
+
+/// Switches between the light and dark surfaces. Call [`apply_visuals`] afterwards.
+pub fn set_light(light: bool) {
+    LIGHT_MODE.store(light, Ordering::Relaxed);
+}
+
+pub fn is_light() -> bool {
+    LIGHT_MODE.load(Ordering::Relaxed)
+}
+
+pub fn surfaces() -> &'static Surfaces {
+    if is_light() { &LIGHT } else { &DARK }
+}
+
+pub fn bg() -> Color32 {
+    surfaces().bg
+}
+pub fn sidebar() -> Color32 {
+    surfaces().sidebar
+}
+pub fn card() -> Color32 {
+    surfaces().card
+}
+pub fn card_hover() -> Color32 {
+    surfaces().card_hover
+}
+pub fn inset() -> Color32 {
+    surfaces().inset
+}
+pub fn border() -> Color32 {
+    surfaces().border
+}
+pub fn text() -> Color32 {
+    surfaces().text
+}
+pub fn text_dim() -> Color32 {
+    surfaces().text_dim
+}
+pub fn text_faint() -> Color32 {
+    surfaces().text_faint
+}
+pub fn success() -> Color32 {
+    surfaces().success
+}
+pub fn warn() -> Color32 {
+    surfaces().warn
+}
+pub fn danger() -> Color32 {
+    surfaces().danger
+}
+
+/// A black shadow of the given opacity (0–255 on dark), scaled down on light surfaces.
+pub fn shadow(alpha: u8) -> Color32 {
+    Color32::from_black_alpha((alpha as f32 * surfaces().shadow) as u8)
+}
 
 static THEME: AtomicU8 = AtomicU8::new(0);
 
@@ -45,23 +179,24 @@ pub fn rgb((r, g, b): Rgb) -> Color32 {
     Color32::from_rgb(r, g, b)
 }
 
-/// Main accent: buttons, switches, selection, icons.
+/// Main accent: buttons, switches, selection, icons. On light surfaces each theme uses its
+/// darker "ink" variant (Ivory's off-white would vanish on white).
 pub fn accent() -> Color32 {
-    rgb(palette().accent)
+    if is_light() { rgb(palette().ink) } else { rgb(palette().accent) }
 }
 
 pub fn accent_hover() -> Color32 {
-    rgb(palette().accent_hover)
+    if is_light() { lerp_color(rgb(palette().ink), Color32::BLACK, 0.15) } else { rgb(palette().accent_hover) }
 }
 
 /// Text and icons on an accent fill.
 pub fn on_accent() -> Color32 {
-    rgb(palette().on_accent)
+    if is_light() { Color32::WHITE } else { rgb(palette().on_accent) }
 }
 
 /// Second accent, for gradients and secondary highlights.
 pub fn accent2() -> Color32 {
-    rgb(palette().accent_2)
+    if is_light() { rgb(palette().ink_2) } else { rgb(palette().accent_2) }
 }
 
 /// `base` tinted towards the accent, for selected surfaces.
@@ -180,36 +315,42 @@ pub fn install(ctx: &egui::Context) {
 /// egui's own widget colours (text selection, combo boxes, sliders...) for the current theme.
 pub fn apply_visuals(ctx: &egui::Context) {
     let accent = accent();
-    let mut visuals = egui::Visuals::dark();
-    visuals.panel_fill = BG;
-    visuals.window_fill = CARD;
-    visuals.extreme_bg_color = INSET;
-    visuals.faint_bg_color = CARD_HOVER;
+    let c = surfaces();
+    let mut visuals = if is_light() { egui::Visuals::light() } else { egui::Visuals::dark() };
+    visuals.panel_fill = c.bg;
+    visuals.window_fill = c.card;
+    visuals.extreme_bg_color = c.inset;
+    visuals.faint_bg_color = c.card_hover;
     visuals.selection.bg_fill = accent.linear_multiply(0.45);
     visuals.selection.stroke = Stroke::new(1.0, accent);
     visuals.hyperlink_color = accent;
     visuals.window_corner_radius = CornerRadius::same(12);
     visuals.menu_corner_radius = CornerRadius::same(10);
-    visuals.window_stroke = Stroke::new(1.0, BORDER);
-    visuals.override_text_color = Some(TEXT);
+    visuals.window_stroke = Stroke::new(1.0, c.border);
+    visuals.override_text_color = Some(c.text);
     let w = &mut visuals.widgets;
     for (state, fill, stroke) in [
-        (&mut w.noninteractive, CARD, BORDER),
-        (&mut w.inactive, Color32::from_rgb(34, 35, 45), Color32::from_rgb(44, 45, 58)),
-        (&mut w.hovered, Color32::from_rgb(42, 43, 56), Color32::from_rgb(70, 70, 92)),
-        (&mut w.active, Color32::from_rgb(48, 48, 64), accent),
-        (&mut w.open, Color32::from_rgb(40, 41, 54), accent),
+        (&mut w.noninteractive, c.card, c.border),
+        (&mut w.inactive, c.control, c.control_border),
+        (&mut w.hovered, c.control_hover, lerp_color(c.control_border, c.text_faint, 0.4)),
+        (&mut w.active, c.control_hover, accent),
+        (&mut w.open, c.control, accent),
     ] {
         state.corner_radius = CornerRadius::same(8);
         state.bg_fill = fill;
         state.weak_bg_fill = fill;
         state.bg_stroke = Stroke::new(1.0, stroke);
     }
-    w.noninteractive.fg_stroke = Stroke::new(1.0, TEXT_DIM);
-    w.inactive.fg_stroke = Stroke::new(1.0, TEXT);
-    w.hovered.fg_stroke = Stroke::new(1.5, TEXT);
-    w.active.fg_stroke = Stroke::new(1.5, TEXT);
-    ctx.set_visuals(visuals);
+    w.noninteractive.fg_stroke = Stroke::new(1.0, c.text_dim);
+    w.inactive.fg_stroke = Stroke::new(1.0, c.text);
+    w.hovered.fg_stroke = Stroke::new(1.5, c.text);
+    w.active.fg_stroke = Stroke::new(1.5, c.text);
+    visuals.popup_shadow.color = shadow(90);
+    visuals.window_shadow.color = shadow(90);
+    // Same visuals whichever theme egui thinks is active; the native title bar follows the mode.
+    ctx.set_visuals_of(egui::Theme::Dark, visuals.clone());
+    ctx.set_visuals_of(egui::Theme::Light, visuals);
+    ctx.set_theme(if is_light() { egui::Theme::Light } else { egui::Theme::Dark });
 }
 
 pub fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {

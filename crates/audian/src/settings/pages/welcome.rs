@@ -13,16 +13,16 @@ fn step(ui: &mut egui::Ui, n: u32, done: bool, title: &str, subtitle: &str) {
         let (r, _) = ui.allocate_exact_size(vec2(30.0, 30.0), egui::Sense::hover());
         let p = ui.painter();
         if done {
-            p.circle_filled(r.center(), 14.0, SUCCESS.linear_multiply(0.2));
-            p.text(r.center(), egui::Align2::CENTER_CENTER, icon::CHECK, theme::icons(13.0), SUCCESS);
+            p.circle_filled(r.center(), 14.0, success().linear_multiply(0.2));
+            p.text(r.center(), egui::Align2::CENTER_CENTER, icon::CHECK, theme::icons(13.0), success());
         } else {
             p.circle_filled(r.center(), 14.0, accent().linear_multiply(0.2));
             p.text(r.center(), egui::Align2::CENTER_CENTER, n.to_string(), theme::semibold(14.0), accent());
         }
         ui.vertical(|ui| {
             ui.spacing_mut().item_spacing.y = 1.0;
-            ui.label(RichText::new(title).font(theme::semibold(16.0)).color(TEXT));
-            ui.label(RichText::new(subtitle).size(12.5).color(TEXT_DIM));
+            ui.label(RichText::new(title).font(theme::semibold(16.0)).color(text()));
+            ui.label(RichText::new(subtitle).size(12.5).color(text_dim()));
         });
     });
     ui.add_space(6.0);
@@ -55,19 +55,19 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
         for m in &recommended {
             ui.horizontal(|ui| {
                 ui.add_space(40.0);
-                ui.label(RichText::new(m.name).size(14.0).color(TEXT));
-                ui.label(RichText::new(format!("{} · ~{} MB RAM", catalog::format_size(m.size), m.ram_mb)).size(12.5).color(TEXT_FAINT));
+                ui.label(RichText::new(m.name).size(14.0).color(text()));
+                ui.label(RichText::new(format!("{} · ~{} MB RAM", catalog::format_size(m.size), m.ram_mb)).size(12.5).color(text_faint()));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if app.model_installed(m) {
-                        w::badge(ui, "Ready", SUCCESS);
+                        w::badge(ui, "Ready", success());
                     } else if let Some(d) = app.download_for(m.file).cloned() {
                         match d.state() {
                             State::Downloading => w::progress(ui, d.fraction(), 200.0),
                             State::Verifying => {
-                                ui.label(RichText::new("Verifying…").size(12.5).color(TEXT_DIM));
+                                ui.label(RichText::new("Verifying…").size(12.5).color(text_dim()));
                             }
                             State::Failed(e) => {
-                                ui.label(RichText::new(e).size(12.0).color(WARN));
+                                ui.label(RichText::new(e).size(12.0).color(warn()));
                             }
                             _ => {}
                         }
@@ -88,9 +88,9 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
                             }
                         }
                     }
-                    ui.label(RichText::new("From Hugging Face, verified by checksum.").size(12.5).color(TEXT_FAINT));
+                    ui.label(RichText::new("From Hugging Face, verified by checksum.").size(12.5).color(text_faint()));
                 } else {
-                    ui.label(RichText::new("Downloading… you can continue setting up meanwhile.").size(12.5).color(TEXT_DIM));
+                    ui.label(RichText::new("Downloading… you can continue setting up meanwhile.").size(12.5).color(text_dim()));
                 }
             });
         }

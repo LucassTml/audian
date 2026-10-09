@@ -1,13 +1,13 @@
 //! Speech-to-text: `audio (16 kHz mono f32) -> TranscriptionProvider -> text`.
 //!
-//! Providers are interchangeable behind the trait. Today there is a local whisper.cpp provider;
-//! a cloud provider (e.g. an OpenAI-compatible endpoint) would be another implementation.
+//! Providers are interchangeable behind the trait; today both are local engines running in
+//! helper processes: whisper.cpp and NVIDIA Parakeet.
 
-mod whisper;
+mod local;
 
 use audian_common::config::{Config, SttProvider};
 
-pub use whisper::WhisperLocal;
+pub use local::LocalEngine;
 
 pub struct TranscribeOptions {
     /// ISO 639-1 code or "auto".
@@ -29,8 +29,8 @@ pub struct Transcript {
 pub enum SttError {
     #[error("Speech model not found ({0}). Choose an installed model in Settings › Transcription.")]
     ModelMissing(String),
-    #[error("The speech engine is not installed next to Audian (audian-stt.exe missing).")]
-    EngineMissing,
+    #[error("The speech engine is not installed next to Audian ({0} missing).")]
+    EngineMissing(&'static str),
     #[error("The speech engine failed: {0}")]
     Engine(String),
     #[error("Transcription took too long and was cancelled.")]
@@ -52,12 +52,27 @@ pub trait TranscriptionProvider: Send {
 }
 
 pub fn create(cfg: &Config) -> Box<dyn TranscriptionProvider> {
-    match cfg.transcription.provider {
-        SttProvider::WhisperLocal => Box::new(WhisperLocal::new(&cfg.transcription.whisper)),
+    let t = &cfg.transcription;
+    match t.provider {
+        SttProvider::WhisperLocal => Box::new(LocalEngine::whisper(&t.whisper)),
+        SttProvider::Parakeet => Box::new(LocalEngine::parakeet(&t.parakeet)),
     }
 }
 
 /// Key describing the provider configuration; when it changes the provider is recreated.
 pub fn config_key(cfg: &Config) -> String {
-    format!("{:?}|{:?}", cfg.transcription.provider, cfg.transcription.whisper)
+    let t = &cfg.transcription;
+    match t.provider {
+        SttProvider::WhisperLocal => format!("whisper|{:?}", t.whisper),
+        SttProvider::Parakeet => format!("parakeet|{:?}", t.parakeet),
+    }
+}
+
+/// Minutes the current speech engine stays loaded after a dictation (0 = unload right away).
+pub fn keep_loaded_minutes(cfg: &Config) -> u32 {
+    let t = &cfg.transcription;
+    match t.provider {
+        SttProvider::WhisperLocal => t.whisper.keep_loaded_minutes,
+        SttProvider::Parakeet => t.parakeet.keep_loaded_minutes,
+    }
 }

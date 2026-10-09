@@ -38,7 +38,7 @@ pub fn shortcut(app: &mut SettingsApp, ui: &mut egui::Ui) {
             ui.checkbox(&mut app.shortcut.alt, "Alt");
             ui.checkbox(&mut app.shortcut.shift, "Shift");
             ui.checkbox(&mut app.shortcut.win, "Win");
-            ui.label(RichText::new("+").color(TEXT_FAINT));
+            ui.label(RichText::new("+").color(text_faint()));
             egui::ComboBox::from_id_salt("key").selected_text(app.shortcut.key.clone()).width(120.0).show_ui(ui, |ui| {
                 for k in hotkey::selectable_keys() {
                     ui.selectable_value(&mut app.shortcut.key, k.clone(), k);
@@ -55,10 +55,10 @@ pub fn shortcut(app: &mut SettingsApp, ui: &mut egui::Ui) {
         ui.add_space(2.0);
         match app.check_shortcut() {
             Ok(()) => {
-                ui.label(RichText::new(format!("{}  Available", icon::CHECK)).font(super::super::theme::icons(12.5)).color(SUCCESS));
+                ui.label(RichText::new(format!("{}  Available", icon::CHECK)).font(super::super::theme::icons(12.5)).color(success()));
             }
             Err(e) => {
-                ui.label(RichText::new(format!("{e} — keeping {}", app.saved.hotkey.shortcut)).size(13.0).color(WARN));
+                ui.label(RichText::new(format!("{e} — keeping {}", app.saved.hotkey.shortcut)).size(13.0).color(warn()));
             }
         }
         let s = &app.shortcut;
@@ -98,7 +98,7 @@ pub fn shortcut(app: &mut SettingsApp, ui: &mut egui::Ui) {
         });
         ui.add_enabled_ui(app.draft.auto_stop.enabled, |ui| {
             w::divider(ui);
-            ui.label(RichText::new("Pause before finishing").size(14.5).color(TEXT));
+            ui.label(RichText::new("Pause before finishing").size(14.5).color(text()));
             w::hint(ui, "How long you can stay quiet before Audian considers you done. Longer = more room to think mid-sentence.");
             let mut preset = preset_of(app.draft.auto_stop.pause_secs);
             if w::segmented(
@@ -153,7 +153,7 @@ pub fn shortcut(app: &mut SettingsApp, ui: &mut egui::Ui) {
         let paste = app.draft.hotkey.paste_last_shortcut.trim();
         if !paste.is_empty() {
             if let Err(e) = Hotkey::parse(paste) {
-                ui.label(RichText::new(e.to_string()).size(13.0).color(WARN));
+                ui.label(RichText::new(e.to_string()).size(13.0).color(warn()));
             }
         }
     });
@@ -221,12 +221,12 @@ pub fn mic_test(app: &mut SettingsApp, ui: &mut egui::Ui) {
         }
         if let Some(t) = &app.mic_test {
             if let Some(err) = t.error() {
-                ui.label(RichText::new(err).size(13.0).color(WARN));
+                ui.label(RichText::new(err).size(13.0).color(warn()));
             } else {
                 ui.vertical(|ui| {
                     w::level_meter(ui, t.level(), app.draft.audio.silence_threshold, 300.0);
                     let state = if t.peak() < app.draft.audio.silence_threshold { "speak to test" } else { "signal OK" };
-                    ui.label(RichText::new(format!("{}  ·  {state}", t.device())).size(12.0).color(TEXT_DIM));
+                    ui.label(RichText::new(format!("{}  ·  {state}", t.device())).size(12.0).color(text_dim()));
                 });
                 ui.ctx().request_repaint_after(std::time::Duration::from_millis(33));
             }

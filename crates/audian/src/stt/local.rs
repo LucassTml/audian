@@ -1,15 +1,19 @@
-//! Local whisper.cpp provider, running in the `audian-stt` helper process.
+//! Local speech engines, each running in its own helper process with the same protocol:
+//! whisper.cpp (`audian-stt`) and NVIDIA Parakeet (`audian-parakeet`).
 
 use std::time::Duration;
 
-use audian_common::config::WhisperConfig;
+use audian_common::config::{ParakeetConfig, WhisperConfig};
 use audian_common::ipc::{SttRequest, SttResponse};
 use audian_common::paths;
 
 use super::{SttError, Transcript, TranscribeOptions, TranscriptionProvider};
 use crate::helper::{FramedHelper, HelperError};
 
-pub struct WhisperLocal {
+pub struct LocalEngine {
+    name: &'static str,
+    exe: &'static str,
+    /// Model file (Whisper) or folder (Parakeet).
     model_path: String,
     threads: u32,
     idle_secs: u32,
@@ -20,12 +24,22 @@ pub struct WhisperLocal {
     next_id: u64,
 }
 
-impl WhisperLocal {
-    pub fn new(cfg: &WhisperConfig) -> Self {
-        WhisperLocal {
-            model_path: paths::resolve_model(&cfg.model).to_string_lossy().into_owned(),
-            threads: cfg.threads,
-            idle_secs: cfg.keep_loaded_minutes.max(1) * 60,
+impl LocalEngine {
+    pub fn whisper(cfg: &WhisperConfig) -> Self {
+        Self::new("Whisper", "audian-stt.exe", &cfg.model, cfg.threads, cfg.keep_loaded_minutes)
+    }
+
+    pub fn parakeet(cfg: &ParakeetConfig) -> Self {
+        Self::new("Parakeet", "audian-parakeet.exe", &cfg.model, cfg.threads, cfg.keep_loaded_minutes)
+    }
+
+    fn new(name: &'static str, exe: &'static str, model: &str, threads: u32, keep_loaded_minutes: u32) -> Self {
+        LocalEngine {
+            name,
+            exe,
+            model_path: paths::resolve_model(model).to_string_lossy().into_owned(),
+            threads,
+            idle_secs: keep_loaded_minutes.max(1) * 60,
             helper: None,
             load_pending: false,
             loaded: false,
@@ -39,9 +53,9 @@ impl WhisperLocal {
             self.helper = None;
             self.loaded = false;
             self.load_pending = false;
-            let exe = paths::exe_dir().join("audian-stt.exe");
+            let exe = paths::exe_dir().join(self.exe);
             if !exe.is_file() {
-                return Err(SttError::EngineMissing);
+                return Err(SttError::EngineMissing(self.exe));
             }
             let helper = FramedHelper::spawn(&exe, &["--idle-exit-secs".into(), self.idle_secs.to_string()])
                 .map_err(|e| SttError::Engine(e.to_string()))?;
@@ -51,7 +65,7 @@ impl WhisperLocal {
     }
 
     fn start_load(&mut self) -> Result<(), SttError> {
-        if !std::path::Path::new(&self.model_path).is_file() {
+        if !std::path::Path::new(&self.model_path).exists() {
             return Err(SttError::ModelMissing(self.model_path.clone()));
         }
         let (model_path, threads) = (self.model_path.clone(), self.threads);
@@ -128,9 +142,9 @@ fn vocabulary_prompt(words: &[String]) -> String {
     if words.is_empty() { String::new() } else { format!("Glossary: {}.", words.join(", ")) }
 }
 
-impl TranscriptionProvider for WhisperLocal {
+impl TranscriptionProvider for LocalEngine {
     fn name(&self) -> &'static str {
-        "Whisper"
+        self.name
     }
 
     fn is_local(&self) -> bool {

@@ -12,14 +12,37 @@ pub enum ModelKind {
     Rewrite,
 }
 
+/// Which engine runs the model.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Engine {
+    Whisper,
+    Parakeet,
+    Llama,
+}
+
+/// One file of a model that consists of several files (stored together in a folder).
 #[derive(Clone, Debug)]
-pub struct ModelInfo {
-    pub kind: ModelKind,
-    pub name: &'static str,
+pub struct ModelPart {
     pub file: &'static str,
     pub url: &'static str,
     pub size: u64,
     pub sha256: &'static str,
+}
+
+#[derive(Clone, Debug)]
+pub struct ModelInfo {
+    pub kind: ModelKind,
+    pub engine: Engine,
+    pub name: &'static str,
+    /// File name, or folder name for multi-file models.
+    pub file: &'static str,
+    pub url: &'static str,
+    /// Total size in bytes (all parts for multi-file models).
+    pub size: u64,
+    /// Empty for multi-file models: each part has its own checksum.
+    pub sha256: &'static str,
+    /// The files of a multi-file model; empty for single-file models.
+    pub parts: &'static [ModelPart],
     /// Approximate RAM while loaded, in MB.
     pub ram_mb: u32,
     pub speed: &'static str,
@@ -27,14 +50,50 @@ pub struct ModelInfo {
     pub recommended: bool,
 }
 
+/// NVIDIA Parakeet TDT 0.6B v3, int8 ONNX export (CC-BY-4.0).
+const PARAKEET_PARTS: &[ModelPart] = &[
+    ModelPart {
+        file: "encoder-model.int8.onnx",
+        url: "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/main/encoder-model.int8.onnx",
+        size: 652_183_999,
+        sha256: "6139d2fa7e1b086097b277c7149725edbab89cc7c7ae64b23c741be4055aff09",
+    },
+    ModelPart {
+        file: "decoder_joint-model.int8.onnx",
+        url: "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/main/decoder_joint-model.int8.onnx",
+        size: 18_202_004,
+        sha256: "eea7483ee3d1a30375daedc8ed83e3960c91b098812127a0d99d1c8977667a70",
+    },
+    ModelPart {
+        file: "nemo128.onnx",
+        url: "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/main/nemo128.onnx",
+        size: 139_764,
+        sha256: "a9fde1486ebfcc08f328d75ad4610c67835fea58c73ba57e3209a6f6cf019e9f",
+    },
+    ModelPart {
+        file: "vocab.txt",
+        url: "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/main/vocab.txt",
+        size: 93_939,
+        sha256: "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d",
+    },
+    ModelPart {
+        file: "config.json",
+        url: "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/main/config.json",
+        size: 97,
+        sha256: "666903c76b9798caf2c210afd4f6cd60b08a8dbf9800ec8d7a3bc0d2148ac466",
+    },
+];
+
 pub const MODELS: &[ModelInfo] = &[
     ModelInfo {
         kind: ModelKind::Speech,
+        engine: Engine::Whisper,
         name: "Whisper Small (Q8)",
         file: "ggml-small-q8_0.bin",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q8_0.bin",
         size: 264_464_607,
         sha256: "49c8fb02b65e6049d5fa6c04f81f53b867b5ec9540406812c643f177317f779f",
+        parts: &[],
         ram_mb: 450,
         speed: "≈0.4–0.6 s per sentence",
         summary: "Best balance of speed and accuracy on CPU. 99 languages.",
@@ -42,11 +101,27 @@ pub const MODELS: &[ModelInfo] = &[
     },
     ModelInfo {
         kind: ModelKind::Speech,
+        engine: Engine::Parakeet,
+        name: "NVIDIA Parakeet TDT 0.6B v3",
+        file: "parakeet-tdt-0.6b-v3-int8",
+        url: "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx",
+        size: 670_619_803,
+        sha256: "",
+        parts: PARAKEET_PARTS,
+        ram_mb: 800,
+        speed: "≈0.2–0.5 s per sentence",
+        summary: "Faster and more accurate than Whisper on CPU, for 25 European languages incl. English and Portuguese.",
+        recommended: false,
+    },
+    ModelInfo {
+        kind: ModelKind::Speech,
+        engine: Engine::Whisper,
         name: "Whisper Large v3 Turbo (Q5)",
         file: "ggml-large-v3-turbo-q5_0.bin",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
         size: 574_041_195,
         sha256: "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+        parts: &[],
         ram_mb: 780,
         speed: "≈2–4 s per sentence",
         summary: "Most accurate, especially for accents and non-English. Slower on CPU.",
@@ -54,11 +129,13 @@ pub const MODELS: &[ModelInfo] = &[
     },
     ModelInfo {
         kind: ModelKind::Speech,
+        engine: Engine::Whisper,
         name: "Whisper Small English (Q8)",
         file: "ggml-small.en-q8_0.bin",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en-q8_0.bin",
         size: 264_477_561,
         sha256: "67a179f608ea6114bd3fdb9060e762b588a3fb3bd00c4387971be4d177958067",
+        parts: &[],
         ram_mb: 450,
         speed: "≈0.4 s per sentence",
         summary: "English only; slightly more accurate than Small for English speakers.",
@@ -66,11 +143,13 @@ pub const MODELS: &[ModelInfo] = &[
     },
     ModelInfo {
         kind: ModelKind::Speech,
+        engine: Engine::Whisper,
         name: "Whisper Base",
         file: "ggml-base.bin",
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
         size: 147_951_465,
         sha256: "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe",
+        parts: &[],
         ram_mb: 250,
         speed: "≈0.2 s per sentence",
         summary: "For older or low-power PCs. Noticeably more mistakes.",
@@ -78,11 +157,13 @@ pub const MODELS: &[ModelInfo] = &[
     },
     ModelInfo {
         kind: ModelKind::Rewrite,
+        engine: Engine::Llama,
         name: "Qwen 3.5 2B (Q4)",
         file: "Qwen3.5-2B-Q4_K_M.gguf",
         url: "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
         size: 1_280_835_840,
         sha256: "aaf42c8b7c3cab2bf3d69c355048d4a0ee9973d48f16c731c0520ee914699223",
+        parts: &[],
         ram_mb: 1450,
         speed: "≈0.5–1 s per rewrite",
         summary: "Recommended: fast on CPU, multilingual, follows rewriting rules well.",
@@ -90,11 +171,13 @@ pub const MODELS: &[ModelInfo] = &[
     },
     ModelInfo {
         kind: ModelKind::Rewrite,
+        engine: Engine::Llama,
         name: "Qwen 3.5 0.8B (Q4)",
         file: "Qwen3.5-0.8B-Q4_K_M.gguf",
         url: "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf",
         size: 532_517_120,
         sha256: "bd258782e35f7f458f8aced1adc053e6e92e89bc735ba3be89d38a06121dc517",
+        parts: &[],
         ram_mb: 700,
         speed: "≈0.3 s per rewrite",
         summary: "Lightest option for 8 GB PCs. Handles cleanup well, weaker on restructuring.",
@@ -102,11 +185,13 @@ pub const MODELS: &[ModelInfo] = &[
     },
     ModelInfo {
         kind: ModelKind::Rewrite,
+        engine: Engine::Llama,
         name: "Qwen 3.5 4B (Q4)",
         file: "Qwen3.5-4B-Q4_K_M.gguf",
         url: "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
         size: 2_740_937_888,
         sha256: "00fe7986ff5f6b463e62455821146049db6f9313603938a70800d1fb69ef11a4",
+        parts: &[],
         ram_mb: 2900,
         speed: "≈1.5–2.5 s per rewrite",
         summary: "Higher quality for long, rambling dictation. Needs 16 GB RAM.",
@@ -114,11 +199,13 @@ pub const MODELS: &[ModelInfo] = &[
     },
     ModelInfo {
         kind: ModelKind::Rewrite,
+        engine: Engine::Llama,
         name: "Llama 3.2 3B Instruct (Q4)",
         file: "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
         url: "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
         size: 2_019_377_696,
         sha256: "6c1a2b41161032677be168d354123594c0e6e67d2b9227c84f296ad037c728ff",
+        parts: &[],
         ram_mb: 2500,
         speed: "≈1–2 s per rewrite",
         summary: "Strong English writing; weaker than Qwen in Portuguese and other languages.",
@@ -134,9 +221,15 @@ pub fn recommended() -> impl Iterator<Item = &'static ModelInfo> {
     MODELS.iter().filter(|m| m.recommended)
 }
 
-/// True if the model file is present with the expected size.
+/// True if the model (every part, for multi-file models) is present with the expected size.
 pub fn is_installed(model: &ModelInfo) -> bool {
-    std::fs::metadata(crate::paths::models_dir().join(model.file)).map(|m| m.len() == model.size).unwrap_or(false)
+    let path = crate::paths::models_dir().join(model.file);
+    let size = |p: &std::path::Path| std::fs::metadata(p).map(|m| m.len()).ok();
+    if model.parts.is_empty() {
+        size(&path) == Some(model.size)
+    } else {
+        model.parts.iter().all(|part| size(&path.join(part.file)) == Some(part.size))
+    }
 }
 
 pub fn format_size(bytes: u64) -> String {

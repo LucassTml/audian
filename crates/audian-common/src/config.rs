@@ -9,7 +9,7 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::paths;
-pub use crate::theme::{IndicatorStyle, ThemeId};
+pub use crate::theme::{IndicatorStyle, ThemeId, WindowMode};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(default)]
@@ -157,14 +157,17 @@ impl Default for AudioConfig {
 pub enum SttProvider {
     /// whisper.cpp running locally in a helper process. Audio never leaves the machine.
     WhisperLocal,
+    /// NVIDIA Parakeet TDT (ONNX Runtime) in a helper process; 25 European languages, local.
+    Parakeet,
 }
 
 impl SttProvider {
-    pub const ALL: [SttProvider; 1] = [Self::WhisperLocal];
+    pub const ALL: [SttProvider; 2] = [Self::WhisperLocal, Self::Parakeet];
 
     pub fn label(self) -> &'static str {
         match self {
             Self::WhisperLocal => "Whisper (local, offline)",
+            Self::Parakeet => "NVIDIA Parakeet (local, offline)",
         }
     }
 }
@@ -180,6 +183,7 @@ pub struct TranscriptionConfig {
     /// Words and names the recognizer should favour (product names, jargon, people).
     pub vocabulary: Vec<String>,
     pub whisper: WhisperConfig,
+    pub parakeet: ParakeetConfig,
 }
 
 impl Default for TranscriptionConfig {
@@ -190,6 +194,7 @@ impl Default for TranscriptionConfig {
             auto_languages: Vec::new(),
             vocabulary: Vec::new(),
             whisper: WhisperConfig::default(),
+            parakeet: ParakeetConfig::default(),
         }
     }
 }
@@ -204,6 +209,23 @@ pub struct WhisperConfig {
     /// Minutes the model stays in memory after the last use (0 = unload right after use, the
     /// default: it is loaded again at the next shortcut press, while the user speaks).
     pub keep_loaded_minutes: u32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(default)]
+pub struct ParakeetConfig {
+    /// Model folder inside the models directory, or an absolute path.
+    pub model: String,
+    /// CPU threads; 0 = choose automatically.
+    pub threads: u32,
+    /// Minutes the model stays in memory after the last use (0 = unload right after use).
+    pub keep_loaded_minutes: u32,
+}
+
+impl Default for ParakeetConfig {
+    fn default() -> Self {
+        Self { model: "parakeet-tdt-0.6b-v3-int8".into(), threads: 0, keep_loaded_minutes: 0 }
+    }
 }
 
 impl Default for WhisperConfig {
@@ -552,6 +574,8 @@ impl Default for OverlayConfig {
 pub struct AppearanceConfig {
     /// Accent colours of the Audian window and the recording indicator.
     pub theme: ThemeId,
+    /// Light or dark Audian window.
+    pub mode: WindowMode,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

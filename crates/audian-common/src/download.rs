@@ -4,7 +4,7 @@
 
 use std::io::Read;
 use std::os::windows::process::CommandExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -91,16 +91,49 @@ pub fn start(model: &'static ModelInfo) -> Download {
 fn run(model: &ModelInfo, dl: &Download) -> Result<(), String> {
     let dir = paths::models_dir();
     std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create models folder: {e}"))?;
-    let dest = dir.join(model.file);
-    let part = dir.join(format!("{}.part", model.file));
-    if std::fs::metadata(&part).map(|m| m.len() > model.size).unwrap_or(false) {
-        let _ = std::fs::remove_file(&part);
+    if model.parts.is_empty() {
+        let dest = dir.join(model.file);
+        let part = dir.join(format!("{}.part", model.file));
+        fetch(model.url, &part, model.size, model.sha256, dl, 0)?;
+        return std::fs::rename(&part, &dest).map_err(|e| format!("cannot finalise download: {e}"));
     }
-    log::info!("downloading {} from {}", model.file, model.url);
+
+    // Multi-file model: download every file into "<folder>.part", then publish the folder.
+    let staging = dir.join(format!("{}.part", model.file));
+    std::fs::create_dir_all(&staging).map_err(|e| format!("cannot create download folder: {e}"))?;
+    let mut done = 0;
+    for part in model.parts {
+        let dest = staging.join(part.file);
+        let complete = std::fs::metadata(&dest).map(|m| m.len() == part.size).unwrap_or(false)
+            && sha256_file(&dest).map(|d| d.eq_ignore_ascii_case(part.sha256)).unwrap_or(false);
+        if !complete {
+            let tmp = staging.join(format!("{}.download", part.file));
+            fetch(part.url, &tmp, part.size, part.sha256, dl, done)?;
+            std::fs::rename(&tmp, &dest).map_err(|e| format!("cannot finalise download: {e}"))?;
+        }
+        done += part.size;
+    }
+    let final_dir = dir.join(model.file);
+    if final_dir.exists() {
+        let _ = std::fs::remove_dir_all(&final_dir);
+    }
+    std::fs::rename(&staging, &final_dir).map_err(|e| format!("cannot finalise download: {e}"))
+}
+
+/// Downloads `url` into `part` (resuming a previous partial file) and verifies its size and
+/// SHA-256. Progress is reported as `base` plus the bytes of this file.
+fn fetch(url: &str, part: &Path, size: u64, sha256: &str, dl: &Download, base: u64) -> Result<(), String> {
+    if std::fs::metadata(part).map(|m| m.len() > size).unwrap_or(false) {
+        let _ = std::fs::remove_file(part);
+    }
+    if let Ok(mut s) = dl.state.lock() {
+        *s = State::Downloading;
+    }
+    log::info!("downloading {url}");
     let mut child = Command::new(curl())
         .args(["-L", "--fail", "--silent", "--show-error", "--retry", "3", "--retry-delay", "2", "-C", "-", "-o"])
-        .arg(&part)
-        .arg(model.url)
+        .arg(part)
+        .arg(url)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
@@ -108,8 +141,8 @@ fn run(model: &ModelInfo, dl: &Download) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("could not start the download (curl.exe): {e}"))?;
     loop {
-        if let Ok(meta) = std::fs::metadata(&part) {
-            dl.received.store(meta.len(), Ordering::Relaxed);
+        if let Ok(meta) = std::fs::metadata(part) {
+            dl.received.store(base + meta.len(), Ordering::Relaxed);
         }
         if dl.cancel.load(Ordering::Relaxed) {
             let _ = child.kill();
@@ -132,20 +165,19 @@ fn run(model: &ModelInfo, dl: &Download) -> Result<(), String> {
             Err(e) => return Err(e.to_string()),
         }
     }
-    let len = std::fs::metadata(&part).map(|m| m.len()).unwrap_or(0);
-    dl.received.store(len, Ordering::Relaxed);
-    if len != model.size {
-        return Err(format!("incomplete download ({len} of {} bytes)", model.size));
+    let len = std::fs::metadata(part).map(|m| m.len()).unwrap_or(0);
+    dl.received.store(base + len, Ordering::Relaxed);
+    if len != size {
+        return Err(format!("incomplete download ({len} of {size} bytes)"));
     }
     if let Ok(mut s) = dl.state.lock() {
         *s = State::Verifying;
     }
-    let digest = sha256_file(&part).map_err(|e| format!("cannot verify download: {e}"))?;
-    if !digest.eq_ignore_ascii_case(model.sha256) {
-        let _ = std::fs::remove_file(&part);
+    let digest = sha256_file(part).map_err(|e| format!("cannot verify download: {e}"))?;
+    if !digest.eq_ignore_ascii_case(sha256) {
+        let _ = std::fs::remove_file(part);
         return Err("the downloaded file is corrupted (checksum mismatch); please retry".into());
     }
-    std::fs::rename(&part, &dest).map_err(|e| format!("cannot finalise download: {e}"))?;
     Ok(())
 }
 

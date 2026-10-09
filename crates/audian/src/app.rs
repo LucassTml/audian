@@ -9,7 +9,7 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use audian_common::config::{Config, ProcessingMode, RecordingMode, RewriteProvider};
+use audian_common::config::{Config, ProcessingMode, RecordingMode, RewriteProvider, SttProvider};
 use audian_common::{history, paths};
 use windows::Win32::Foundation::*;
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
@@ -262,9 +262,12 @@ pub fn run() -> i32 {
 }
 
 fn models_missing(cfg: &Config) -> bool {
-    let stt = paths::resolve_model(&cfg.transcription.whisper.model);
+    let stt_missing = match cfg.transcription.provider {
+        SttProvider::WhisperLocal => !paths::resolve_model(&cfg.transcription.whisper.model).is_file(),
+        SttProvider::Parakeet => !paths::resolve_model(&cfg.transcription.parakeet.model).is_dir(),
+    };
     let llm = paths::resolve_model(&cfg.processing.local_llm.model);
-    !stt.is_file() || (cfg.processing.enabled && cfg.processing.provider == RewriteProvider::LocalLlm && !llm.is_file())
+    stt_missing || (cfg.processing.enabled && cfg.processing.provider == RewriteProvider::LocalLlm && !llm.is_file())
 }
 
 impl App {

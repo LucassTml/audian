@@ -50,7 +50,7 @@ try {
     if ($Package) {
         $out = Join-Path $root "dist"
         New-Item -ItemType Directory -Force $out | Out-Null
-        foreach ($exe in "audian.exe", "audian-stt.exe", "audian-llm.exe") {
+        foreach ($exe in "audian.exe", "audian-stt.exe", "audian-parakeet.exe", "audian-llm.exe") {
             Copy-Item (Join-Path $root "target\release\$exe") $out -Force
         }
         Write-Host "Packaged binaries in $out"

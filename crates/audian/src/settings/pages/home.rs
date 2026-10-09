@@ -25,10 +25,10 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
     hero.spacing_mut().item_spacing.y = 6.0;
     hero.horizontal(|ui| {
         if app.daemon_running {
-            w::status_dot(ui, SUCCESS, true);
+            w::status_dot(ui, theme::DARK.success, true);
             ui.label(RichText::new("Ready").size(13.0).color(Color32::from_rgb(200, 240, 220)));
         } else {
-            w::status_dot(ui, WARN, false);
+            w::status_dot(ui, theme::DARK.warn, false);
             ui.label(RichText::new("Audian is not running").size(13.0).color(Color32::from_rgb(255, 225, 180)));
         }
     });
@@ -55,7 +55,7 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
     let tw = super::tile_width(ui, 4);
     ui.horizontal(|ui| {
         w::stat_tile(ui, tw, icon::TEXT, &format_count(stats.words), "words dictated", accent());
-        w::stat_tile(ui, tw, icon::CLOCK, &format_minutes(stats.minutes_saved()), "saved vs typing", SUCCESS);
+        w::stat_tile(ui, tw, icon::CLOCK, &format_minutes(stats.minutes_saved()), "saved vs typing", success());
         w::stat_tile(ui, tw, icon::MIC, &format_count(stats.dictations), "dictations", accent2());
         w::stat_tile(
             ui,
@@ -63,7 +63,7 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
             icon::SPARKLE,
             &avg_ms.map(|m| format!("{:.1} s", m / 1000.0)).unwrap_or_else(|| "—".into()),
             "avg. processing",
-            WARN,
+            warn(),
         );
     });
     ui.add_space(14.0);
@@ -106,9 +106,9 @@ pub fn show(app: &mut SettingsApp, ui: &mut egui::Ui) {
                 let text_w = (ui.available_width() - 48.0).max(120.0);
                 ui.allocate_ui_with_layout(vec2(text_w, 0.0), egui::Layout::top_down(egui::Align::Min), |ui| {
                     ui.spacing_mut().item_spacing.y = 3.0;
-                    ui.label(RichText::new(format!("{}  ·  {}  ·  {}", e.time, if e.app.is_empty() { "—" } else { &e.app }, e.mode)).size(12.0).color(TEXT_FAINT));
+                    ui.label(RichText::new(format!("{}  ·  {}  ·  {}", e.time, if e.app.is_empty() { "—" } else { &e.app }, e.mode)).size(12.0).color(text_faint()));
                     let text: String = e.text.chars().take(180).collect();
-                    ui.add(egui::Label::new(RichText::new(text).size(14.0).color(TEXT)).wrap());
+                    ui.add(egui::Label::new(RichText::new(text).size(14.0).color(theme::text())).wrap());
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if w::icon_button(ui, icon::COPY, "Copy").clicked() {
@@ -137,7 +137,7 @@ fn quick_settings(app: &mut SettingsApp, ui: &mut egui::Ui) {
             w::toggle(ui, &mut app.draft.general.sounds);
         });
         ui.add_space(4.0);
-        ui.label(RichText::new("Default mode").size(12.5).color(TEXT_DIM));
+        ui.label(RichText::new("Default mode").size(12.5).color(text_dim()));
         w::segmented(
             ui,
             egui::Id::new("home-mode"),
@@ -158,7 +158,7 @@ pub fn resources_card(app: &mut SettingsApp, ui: &mut egui::Ui) {
     app.monitor.tick();
     ui.ctx().request_repaint_after(std::time::Duration::from_millis(1500));
     let snap = &app.monitor.snapshot;
-    let keep_stt = app.saved.transcription.whisper.keep_loaded_minutes;
+    let speech_note = keep_note(crate::stt::keep_loaded_minutes(&app.saved));
     let keep_llm = app.saved.processing.local_llm.keep_loaded_minutes;
     w::card(ui, |ui| {
         w::card_title(ui, icon::CHIP, "Resource usage", "Live — engines only run while needed");
@@ -169,19 +169,19 @@ pub fn resources_card(app: &mut SettingsApp, ui: &mut egui::Ui) {
         ] {
             ui.horizontal(|ui| {
                 let (r, _) = ui.allocate_exact_size(vec2(10.0, 10.0), egui::Sense::hover());
-                ui.painter().circle_filled(r.center(), 4.0, if stat.running { SUCCESS } else { Color32::from_rgb(70, 70, 86) });
-                ui.label(RichText::new(name).size(14.0).color(TEXT));
+                ui.painter().circle_filled(r.center(), 4.0, if stat.running { success() } else { text_faint() });
+                ui.label(RichText::new(name).size(14.0).color(text()));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if stat.running {
-                        ui.label(RichText::new(format!("{:.0} MB  ·  {:.1}% CPU", stat.memory_mb, stat.cpu_percent)).size(13.0).color(TEXT_DIM));
+                        ui.label(RichText::new(format!("{:.0} MB  ·  {:.1}% CPU", stat.memory_mb, stat.cpu_percent)).size(13.0).color(text_dim()));
                     } else {
-                        ui.label(RichText::new(idle).size(13.0).color(TEXT_FAINT));
+                        ui.label(RichText::new(idle).size(13.0).color(text_faint()));
                     }
                 });
             });
         }
         ui.add_space(2.0);
-        w::hint(ui, &format!("Engines wake when you dictate. Speech: {}. Rewriting: {}.", keep_note(keep_stt), keep_note(keep_llm)));
+        w::hint(ui, &format!("Engines wake when you dictate. Speech: {}. Rewriting: {}.", speech_note, keep_note(keep_llm)));
         let total: f64 = [&snap.tray, &snap.speech, &snap.rewrite].iter().map(|s| s.memory_mb).sum();
         ui.label(
             RichText::new(format!(
@@ -189,7 +189,7 @@ pub fn resources_card(app: &mut SettingsApp, ui: &mut egui::Ui) {
                 total, snap.system_ram_gb
             ))
             .size(12.0)
-            .color(TEXT_FAINT),
+            .color(text_faint()),
         );
     });
     let _ = Align2::LEFT_CENTER;

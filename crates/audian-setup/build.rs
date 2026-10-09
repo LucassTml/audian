@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-const FILES: &[&str] = &["audian.exe", "audian-stt.exe", "audian-llm.exe"];
+const FILES: &[&str] = &["audian.exe", "audian-stt.exe", "audian-parakeet.exe", "audian-llm.exe"];
 
 fn main() {
     audian_build::embed("audian-setup.exe", "Audian Setup");

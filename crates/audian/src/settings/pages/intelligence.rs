@@ -43,36 +43,93 @@ pub fn speech(app: &mut SettingsApp, ui: &mut egui::Ui) {
     w::page_header(ui, "Speech recognition", "Turns your voice into text — always on this computer.");
     w::card(ui, |ui| {
         w::card_title(ui, icon::SPEECH, "Engine", "");
-        ui.horizontal(|ui| {
-            egui::ComboBox::from_id_salt("stt").selected_text(app.draft.transcription.provider.label()).width(260.0).show_ui(ui, |ui| {
-                for p in SttProvider::ALL {
-                    ui.selectable_value(&mut app.draft.transcription.provider, p, p.label());
+        let per_row = 2;
+        let tw = tile_width(ui, per_row);
+        let engines = [
+            (SttProvider::WhisperLocal, "Whisper", icon::LOCK, "OpenAI Whisper on your CPU. 99 languages, custom vocabulary."),
+            (SttProvider::Parakeet, "NVIDIA Parakeet", icon::SPARKLE, "Faster and more accurate on your CPU. 25 European languages."),
+        ];
+        for chunk in engines.chunks(per_row) {
+            ui.horizontal(|ui| {
+                for &(p, title, ic, desc) in chunk {
+                    if w::choice_tile(ui, vec2(tw, 92.0), ic, title, desc, app.draft.transcription.provider == p).clicked() {
+                        app.draft.transcription.provider = p;
+                    }
                 }
             });
-            w::badge(ui, "100% local", SUCCESS);
-        });
-        w::divider(ui);
-        let files = installed(app, "bin");
-        w::row(ui, "Model", "Accuracy vs. speed. Download more under Models.", |ui| {
-            if ui.link("Manage models").clicked() {
-                app.go(Page::Models);
-            }
-            model_combo(ui, "sttmodel", &mut app.draft.transcription.whisper.model, &files);
-        });
-        if let Some(m) = catalog::find(&app.draft.transcription.whisper.model) {
-            w::hint(ui, &format!("{} — {} · ~{} MB RAM while loaded · {}", m.name, m.summary, m.ram_mb, m.speed));
         }
-        w::divider(ui);
-        ui.label(RichText::new("Keep the model in memory").size(14.5).color(TEXT));
-        w::hint(ui, "The engine loads when you press the shortcut (under a second, while you speak) and exits after this much idle time, giving all its memory back. \"After use\" frees it as soon as the text is inserted.");
-        keep_control(ui, "keep-stt", &mut app.draft.transcription.whisper.keep_loaded_minutes);
-        w::row(ui, "CPU threads", "0 = automatic (half your logical cores, max 8).", |ui| {
-            ui.add(egui::DragValue::new(&mut app.draft.transcription.whisper.threads).range(0..=64));
-        });
+        ui.add_space(4.0);
+        match app.draft.transcription.provider {
+            SttProvider::WhisperLocal => whisper_options(app, ui),
+            SttProvider::Parakeet => parakeet_options(app, ui),
+        }
     });
     ui.add_space(12.0);
+    language_card(app, ui);
+    ui.add_space(12.0);
+    w::card(ui, |ui| {
+        w::card_title(ui, icon::TEXT, "Custom vocabulary", "Names, products and jargon to spell correctly — one per line.");
+        if app.draft.transcription.provider == SttProvider::Parakeet {
+            w::hint(ui, "Used by Whisper only; the rewriting step still sees these words in your text.");
+        }
+        ui.add(egui::TextEdit::multiline(&mut app.vocabulary_text).desired_rows(4).desired_width(f32::INFINITY).hint_text("Audian\nKubernetes\nMaria Fernandes"));
+    });
+}
+
+fn local_badges(ui: &mut egui::Ui) {
+    ui.horizontal(|ui| {
+        w::badge(ui, "Private", success());
+        w::badge(ui, "Offline", success());
+    });
+}
+
+fn whisper_options(app: &mut SettingsApp, ui: &mut egui::Ui) {
+    local_badges(ui);
+    w::divider(ui);
+    let files = installed(app, "bin");
+    w::row(ui, "Model", "Accuracy vs. speed. Download more under Models.", |ui| {
+        if ui.link("Manage models").clicked() {
+            app.go(Page::Models);
+        }
+        model_combo(ui, "sttmodel", &mut app.draft.transcription.whisper.model, &files);
+    });
+    if let Some(m) = catalog::find(&app.draft.transcription.whisper.model) {
+        w::hint(ui, &format!("{} — {} · ~{} MB RAM while loaded · {}", m.name, m.summary, m.ram_mb, m.speed));
+    }
+    w::divider(ui);
+    keep_and_threads(ui, "keep-stt", &mut app.draft.transcription.whisper.keep_loaded_minutes, &mut app.draft.transcription.whisper.threads);
+}
+
+fn parakeet_options(app: &mut SettingsApp, ui: &mut egui::Ui) {
+    local_badges(ui);
+    w::divider(ui);
+    match catalog::find(&app.draft.transcription.parakeet.model) {
+        Some(m) => super::models::model_row(app, ui, m),
+        None => w::hint(ui, &format!("Custom model folder: {}", app.draft.transcription.parakeet.model)),
+    }
+    w::hint(
+        ui,
+        "Detects the language by itself among 25 European languages, including English, Portuguese, Spanish, French, German and Italian. Model by NVIDIA (CC-BY-4.0).",
+    );
+    w::divider(ui);
+    keep_and_threads(ui, "keep-pk", &mut app.draft.transcription.parakeet.keep_loaded_minutes, &mut app.draft.transcription.parakeet.threads);
+}
+
+fn keep_and_threads(ui: &mut egui::Ui, id: &str, keep_minutes: &mut u32, threads: &mut u32) {
+    ui.label(RichText::new("Keep the model in memory").size(14.5).color(text()));
+    w::hint(ui, "The engine loads when you press the shortcut (while you speak) and exits after this much idle time, giving all its memory back. \"After use\" frees it as soon as the text is inserted.");
+    keep_control(ui, id, keep_minutes);
+    w::row(ui, "CPU threads", "0 = automatic (half your logical cores, max 8).", |ui| {
+        ui.add(egui::DragValue::new(threads).range(0..=64));
+    });
+}
+
+fn language_card(app: &mut SettingsApp, ui: &mut egui::Ui) {
     w::card(ui, |ui| {
         w::card_title(ui, icon::GLOBE, "Language", "");
+        if app.draft.transcription.provider == SttProvider::Parakeet {
+            w::hint(ui, "Parakeet detects the language by itself; your languages below help label it for rewriting.");
+        }
         w::row(ui, "Spoken language", "", |ui| {
             let current = if app.draft.transcription.language == "auto" { "Auto-detect".to_string() } else { language_name(&app.draft.transcription.language) };
             egui::ComboBox::from_id_salt("lang").selected_text(current).width(220.0).show_ui(ui, |ui| {
@@ -83,7 +140,7 @@ pub fn speech(app: &mut SettingsApp, ui: &mut egui::Ui) {
             });
         });
         if app.draft.transcription.language == "auto" {
-            ui.label(RichText::new("Languages you speak").size(14.5).color(TEXT));
+            ui.label(RichText::new("Languages you speak").size(14.5).color(text()));
             w::hint(ui, "Auto-detect only chooses among these — faster, and avoids mix-ups like Portuguese → Galician on short phrases. None selected = any language.");
             ui.horizontal_wrapped(|ui| {
                 for (code, name) in LANGUAGES {
@@ -98,11 +155,6 @@ pub fn speech(app: &mut SettingsApp, ui: &mut egui::Ui) {
                 }
             });
         }
-    });
-    ui.add_space(12.0);
-    w::card(ui, |ui| {
-        w::card_title(ui, icon::TEXT, "Custom vocabulary", "Names, products and jargon to spell correctly — one per line.");
-        ui.add(egui::TextEdit::multiline(&mut app.vocabulary_text).desired_rows(4).desired_width(f32::INFINITY).hint_text("Audian\nKubernetes\nMaria Fernandes"));
     });
 }
 
@@ -152,8 +204,8 @@ pub fn rewriting(app: &mut SettingsApp, ui: &mut egui::Ui) {
             match app.draft.processing.provider {
                 RewriteProvider::LocalLlm => {
                     ui.horizontal(|ui| {
-                        w::badge(ui, "Private", SUCCESS);
-                        w::badge(ui, "Offline", SUCCESS);
+                        w::badge(ui, "Private", success());
+                        w::badge(ui, "Offline", success());
                     });
                     let files = installed(app, "gguf");
                     w::row(ui, "Model", "", |ui| {
@@ -165,7 +217,7 @@ pub fn rewriting(app: &mut SettingsApp, ui: &mut egui::Ui) {
                     if let Some(m) = catalog::find(&app.draft.processing.local_llm.model) {
                         w::hint(ui, &format!("{} · ~{} MB RAM while loaded · {}", m.summary, m.ram_mb, m.speed));
                     }
-                    ui.label(RichText::new("Keep the model in memory").size(14.5).color(TEXT));
+                    ui.label(RichText::new("Keep the model in memory").size(14.5).color(text()));
                     w::hint(ui, "Loads while you speak; its prompt is restored from a disk cache. \"After use\" frees its memory as soon as the text is inserted.");
                     keep_control(ui, "keep-llm", &mut app.draft.processing.local_llm.keep_loaded_minutes);
                     w::row(ui, "CPU threads", "0 = automatic.", |ui| {
@@ -174,15 +226,15 @@ pub fn rewriting(app: &mut SettingsApp, ui: &mut egui::Ui) {
                 }
                 RewriteProvider::Antigravity => {
                     ui.horizontal(|ui| {
-                        w::badge(ui, "Cloud", WARN);
-                        ui.label(RichText::new("Your transcribed text — never audio — is sent through the Antigravity account signed in on this PC.").size(12.5).color(WARN));
+                        w::badge(ui, "Cloud", warn());
+                        ui.label(RichText::new("Your transcribed text — never audio — is sent through the Antigravity account signed in on this PC.").size(12.5).color(warn()));
                     });
                     w::row(ui, "Antigravity CLI", "", |ui| match &app.agy_path {
                         Some(p) => {
-                            ui.label(RichText::new(p.display().to_string()).size(12.5).color(TEXT_DIM));
+                            ui.label(RichText::new(p.display().to_string()).size(12.5).color(text_dim()));
                         }
                         None => {
-                            ui.label(RichText::new("not found — install Antigravity").size(12.5).color(WARN));
+                            ui.label(RichText::new("not found — install Antigravity").size(12.5).color(warn()));
                         }
                     });
                     w::row(ui, "Model", "Fast \"flash\" models with low effort respond quickest.", |ui| {
@@ -209,8 +261,8 @@ pub fn rewriting(app: &mut SettingsApp, ui: &mut egui::Ui) {
                 }
                 RewriteProvider::Rules => {
                     ui.horizontal(|ui| {
-                        w::badge(ui, "Instant", SUCCESS);
-                        w::badge(ui, "Offline", SUCCESS);
+                        w::badge(ui, "Instant", success());
+                        w::badge(ui, "Offline", success());
                     });
                 }
             }
@@ -332,7 +384,7 @@ pub fn profiles(app: &mut SettingsApp, ui: &mut egui::Ui) {
             seen.into_iter().take(6).collect()
         };
         if !recent.is_empty() {
-            ui.label(RichText::new(format!("Recently used: {}", recent.iter().map(|a| format!("{a}.exe")).collect::<Vec<_>>().join(", "))).size(12.5).color(TEXT_FAINT));
+            ui.label(RichText::new(format!("Recently used: {}", recent.iter().map(|a| format!("{a}.exe")).collect::<Vec<_>>().join(", "))).size(12.5).color(text_faint()));
         }
     });
     let _ = ModelKind::Speech;

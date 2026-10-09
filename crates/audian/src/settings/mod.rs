@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use audian_common::config::{AudioConfig, Config, IndicatorStyle, ThemeId};
+use audian_common::config::{AudioConfig, Config, IndicatorStyle, ThemeId, WindowMode};
 use audian_common::download::{self, Download};
 use audian_common::{catalog, history};
 use eframe::egui::{self, Align2, Color32, Margin, RichText, Sense, TextureHandle, pos2, vec2};
@@ -273,7 +273,7 @@ fn hero_image() -> egui::ColorImage {
     let (fw, fh) = (w as f32, h as f32);
     let pal = theme::palette();
     let mix = |c: (u8, u8, u8), t: f32| {
-        let m = theme::lerp_color(BG, theme::rgb(c), t);
+        let m = theme::lerp_color(theme::BANNER_BASE, theme::rgb(c), t);
         Color::from_rgba8(m.r(), m.g(), m.b(), 255)
     };
     let rect = Rect::from_xywh(0.0, 0.0, fw, fh).unwrap();
@@ -304,14 +304,38 @@ fn hero_image() -> egui::ColorImage {
     egui::ColorImage::from_rgba_unmultiplied([w as usize, h as usize], &audian_art::to_rgba(&pm))
 }
 
-/// The models folder's files (name, size).
+/// True if Windows apps are set to light mode (Settings › Personalization › Colors).
+fn windows_prefers_light() -> bool {
+    use windows::Win32::System::Registry::{HKEY_CURRENT_USER, RRF_RT_REG_DWORD, RegGetValueW};
+    let mut value: u32 = 0;
+    let mut size = std::mem::size_of::<u32>() as u32;
+    unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            windows::core::w!("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
+            windows::core::w!("AppsUseLightTheme"),
+            RRF_RT_REG_DWORD,
+            None,
+            Some(&mut value as *mut u32 as *mut _),
+            Some(&mut size),
+        )
+        .is_ok()
+            && value == 1
+    }
+}
+
+/// The models folder's entries (name, size); a folder (multi-file model) counts the files in it.
 fn list_model_files() -> Vec<(String, u64)> {
+    let size = |e: &std::fs::DirEntry| -> Option<u64> {
+        let meta = e.metadata().ok()?;
+        if !meta.is_dir() {
+            return Some(meta.len());
+        }
+        let files = std::fs::read_dir(e.path()).ok()?;
+        Some(files.filter_map(Result::ok).filter_map(|f| f.metadata().ok()).filter(|m| m.is_file()).map(|m| m.len()).sum())
+    };
     let mut v: Vec<(String, u64)> = std::fs::read_dir(audian_common::paths::models_dir())
-        .map(|rd| {
-            rd.filter_map(Result::ok)
-                .filter_map(|e| Some((e.file_name().to_string_lossy().into_owned(), e.metadata().ok()?.len())))
-                .collect()
-        })
+        .map(|rd| rd.filter_map(Result::ok).filter_map(|e| Some((e.file_name().to_string_lossy().into_owned(), size(&e)?))).collect())
         .unwrap_or_default();
     v.sort();
     v
@@ -495,8 +519,8 @@ impl SettingsApp {
             }
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
-                ui.label(RichText::new("Audian").font(theme::semibold(19.0)).color(TEXT));
-                ui.label(RichText::new(format!("Version {}", audian_common::APP_VERSION)).size(11.5).color(TEXT_FAINT));
+                ui.label(RichText::new("Audian").font(theme::semibold(19.0)).color(text()));
+                ui.label(RichText::new(format!("Version {}", audian_common::APP_VERSION)).size(11.5).color(text_faint()));
             });
         });
         ui.add_space(18.0);
@@ -525,13 +549,13 @@ impl SettingsApp {
         if let Some(ty) = target_y {
             let ay = ui.ctx().animate_value_with_time(egui::Id::new("nav-sel"), ty, 0.2);
             let r = egui::Rect::from_min_size(pos2(start.x, ay), vec2(width, item_h));
-            ui.painter().rect_filled(r, 10.0, theme::tint(Color32::from_rgb(26, 27, 34), 0.1));
+            ui.painter().rect_filled(r, 10.0, theme::tint(theme::surfaces().selected, 0.1));
             ui.painter().rect_filled(egui::Rect::from_min_size(pos2(r.left(), r.top() + 9.0), vec2(3.0, item_h - 18.0)), 2.0, accent());
         }
         let mut last_group = "";
         for (iy, page, ic, label, group) in layout {
             if group != last_group && !group.is_empty() {
-                ui.painter().text(pos2(start.x + 10.0, iy - 13.0), Align2::LEFT_CENTER, group, theme::semibold(10.5), TEXT_FAINT);
+                ui.painter().text(pos2(start.x + 10.0, iy - 13.0), Align2::LEFT_CENTER, group, theme::semibold(10.5), text_faint());
             }
             last_group = group;
             let rect = egui::Rect::from_min_size(pos2(start.x, iy), vec2(width, item_h));
@@ -539,9 +563,9 @@ impl SettingsApp {
             let selected = page == self.page || (self.page == Page::Welcome && page == Page::Home);
             let hover = ui.ctx().animate_bool_with_time(resp.id.with("h"), resp.hovered() && !selected, 0.12);
             if hover > 0.0 {
-                ui.painter().rect_filled(rect, 10.0, Color32::from_rgb(30, 31, 40).linear_multiply(hover));
+                ui.painter().rect_filled(rect, 10.0, theme::surfaces().hovered.linear_multiply(hover));
             }
-            let color = if selected { TEXT } else { lerp_color(TEXT_DIM, TEXT, hover) };
+            let color = if selected { text() } else { lerp_color(text_dim(), text(), hover) };
             ui.painter().text(pos2(rect.left() + 16.0, rect.center().y), Align2::LEFT_CENTER, ic, theme::icons(15.0), if selected { accent() } else { color });
             ui.painter().text(pos2(rect.left() + 44.0, rect.center().y), Align2::LEFT_CENTER, label, theme::body(14.0), color);
             if resp.clicked() {
@@ -558,11 +582,11 @@ impl SettingsApp {
             ui.add_space(4.0);
             ui.horizontal(|ui| {
                 if self.daemon_running {
-                    widgets::status_dot(ui, SUCCESS, true);
-                    ui.label(RichText::new("Running in the tray").size(12.5).color(TEXT_DIM));
+                    widgets::status_dot(ui, success(), true);
+                    ui.label(RichText::new("Running in the tray").size(12.5).color(text_dim()));
                 } else {
-                    widgets::status_dot(ui, WARN, false);
-                    ui.label(RichText::new("Not running").size(12.5).color(TEXT_DIM));
+                    widgets::status_dot(ui, warn(), false);
+                    ui.label(RichText::new("Not running").size(12.5).color(text_dim()));
                     if ui.link(RichText::new("Start").size(12.5)).clicked() {
                         start_daemon();
                     }
@@ -584,16 +608,16 @@ impl SettingsApp {
         let screen = ctx.content_rect();
         let font = theme::semibold(13.0);
         let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("toast")));
-        let galley = painter.layout_no_wrap(text.clone(), font, TEXT);
+        let galley = painter.layout_no_wrap(text.clone(), font, theme::text());
         let size = vec2(galley.size().x + 52.0, 38.0);
         let pos = pos2(screen.right() - size.x - 24.0, screen.bottom() - size.y - 24.0 + (1.0 - appear) * 12.0);
         let rect = egui::Rect::from_min_size(pos, size);
-        painter.rect_filled(rect.translate(vec2(0.0, 4.0)), 12.0, Color32::from_black_alpha((50.0 * alpha) as u8));
-        painter.rect_filled(rect, 12.0, Color32::from_rgb(36, 37, 50).linear_multiply(alpha));
-        painter.rect_stroke(rect, 12.0, egui::Stroke::new(1.0, BORDER.linear_multiply(alpha)), egui::StrokeKind::Inside);
-        let (glyph, color) = if ok { (icon::CHECK, SUCCESS) } else { (icon::WARNING, WARN) };
+        painter.rect_filled(rect.translate(vec2(0.0, 4.0)), 12.0, theme::shadow((50.0 * alpha) as u8));
+        painter.rect_filled(rect, 12.0, theme::surfaces().card.linear_multiply(alpha));
+        painter.rect_stroke(rect, 12.0, egui::Stroke::new(1.0, border().linear_multiply(alpha)), egui::StrokeKind::Inside);
+        let (glyph, color) = if ok { (icon::CHECK, success()) } else { (icon::WARNING, warn()) };
         painter.text(pos2(rect.left() + 18.0, rect.center().y), Align2::CENTER_CENTER, glyph, theme::icons(13.0), color.linear_multiply(alpha));
-        painter.galley(pos2(rect.left() + 34.0, rect.center().y - galley.size().y / 2.0), galley, TEXT.linear_multiply(alpha));
+        painter.galley(pos2(rect.left() + 34.0, rect.center().y - galley.size().y / 2.0), galley, theme::text().linear_multiply(alpha));
         ctx.request_repaint_after(Duration::from_millis(16));
     }
 }
@@ -602,15 +626,21 @@ impl eframe::App for SettingsApp {
     /// Opaque background colour, so areas not painted yet (e.g. while resizing) never flash
     /// darker than the window.
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        BG.to_normalized_gamma_f32()
+        bg().to_normalized_gamma_f32()
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.now = ctx.input(|i| i.time);
-        // Theme changes apply live: egui's widget colours, the logo and cached artwork.
-        if self.draft.appearance.theme != theme::current_theme() {
+        // Theme and light/dark changes apply live: egui's widget colours, the logo and artwork.
+        let light = match self.draft.appearance.mode {
+            WindowMode::Dark => false,
+            WindowMode::Light => true,
+            WindowMode::System => ctx.system_theme().map(|t| t == egui::Theme::Light).unwrap_or_else(windows_prefers_light),
+        };
+        if self.draft.appearance.theme != theme::current_theme() || light != theme::is_light() {
             theme::set_theme(self.draft.appearance.theme);
+            theme::set_light(light);
             theme::apply_visuals(&ctx);
         }
         let theme = theme::current_theme();
@@ -639,11 +669,11 @@ impl eframe::App for SettingsApp {
         egui::Panel::left("nav")
             .resizable(false)
             .exact_size(246.0)
-            .frame(egui::Frame::new().fill(SIDEBAR).inner_margin(Margin { left: 14, right: 14, top: 18, bottom: 14 }))
+            .frame(egui::Frame::new().fill(sidebar()).inner_margin(Margin { left: 14, right: 14, top: 18, bottom: 14 }))
             .show(ui, |ui| self.sidebar(ui));
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(BG).inner_margin(Margin { left: 34, right: 30, top: 26, bottom: 10 }))
+            .frame(egui::Frame::new().fill(bg()).inner_margin(Margin { left: 34, right: 30, top: 26, bottom: 10 }))
             .show(ui, |ui| {
                 // Page transition: a short fade + slide. It starts from a partly visible page
                 // rather than an empty one, which looked like a dark flash on slow frames.
@@ -707,6 +737,11 @@ pub fn run(page: Option<String>) -> anyhow::Result<()> {
         options,
         Box::new(move |cc| {
             theme::set_theme(cfg.appearance.theme);
+            theme::set_light(match cfg.appearance.mode {
+                WindowMode::Dark => false,
+                WindowMode::Light => true,
+                WindowMode::System => windows_prefers_light(),
+            });
             theme::install(&cc.egui_ctx);
             Ok(Box::new(SettingsApp::new(cfg, page)))
         }),

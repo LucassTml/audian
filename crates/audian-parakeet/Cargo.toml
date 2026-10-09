@@ -1,0 +1,21 @@
+[package]
+name = "audian-parakeet"
+description = "Audian speech-to-text helper process (NVIDIA Parakeet TDT via ONNX Runtime)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "audian-parakeet"
+path = "src/main.rs"
+
+[dependencies]
+audian-common.workspace = true
+anyhow.workspace = true
+log.workspace = true
+# ONNX Runtime, linked statically from the prebuilt binaries ort downloads at build time.
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "download-binaries", "tls-native", "api-24"] }
+
+[build-dependencies]
+audian-build.workspace = true

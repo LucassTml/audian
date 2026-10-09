@@ -8,7 +8,7 @@ use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
 
-use audian_common::config::{Config, ProcessingMode, RewriteProvider};
+use audian_common::config::{Config, ProcessingMode, RewriteProvider, SttProvider};
 
 use crate::audio::Recording;
 use crate::pipeline::{self, Engines, Job};
@@ -90,6 +90,7 @@ pub fn transcribe(args: &[String]) -> anyhow::Result<()> {
         match args[i].as_str() {
             "--mode" => cfg.processing.mode = parse_enum::<ProcessingMode>(value)?,
             "--provider" => cfg.processing.provider = parse_enum::<RewriteProvider>(value)?,
+            "--stt" => cfg.transcription.provider = parse_enum::<SttProvider>(value)?,
             "--model" => cfg.transcription.whisper.model = value.to_string(),
             "--language" => cfg.transcription.language = value.to_string(),
             "--repeat" => repeat = value.parse()?,
@@ -105,7 +106,7 @@ pub fn transcribe(args: &[String]) -> anyhow::Result<()> {
     let (samples, sample_rate) = audian_common::wav::read_mono(Path::new(wav_path))?;
     let mut out = std::io::stdout().lock();
     writeln!(out, "file: {wav_path} ({:.1} s)", samples.len() as f32 / sample_rate as f32)?;
-    writeln!(out, "mode: {:?}, provider: {:?}", cfg.processing.mode, cfg.processing.provider)?;
+    writeln!(out, "speech: {:?}, mode: {:?}, provider: {:?}", cfg.transcription.provider, cfg.processing.mode, cfg.processing.provider)?;
 
     let mut engines = Engines::new(&cfg);
     let t = Instant::now();

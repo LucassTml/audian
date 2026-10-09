@@ -1,6 +1,6 @@
 //! History, General, Privacy and About.
 
-use audian_common::config::{InsertMethod, RewriteProvider};
+use audian_common::config::{InsertMethod, RewriteProvider, SttProvider};
 use audian_common::{history, paths};
 use eframe::egui::{self, RichText, vec2};
 
@@ -19,7 +19,7 @@ pub fn history(app: &mut SettingsApp, ui: &mut egui::Ui) {
         return;
     }
     ui.horizontal(|ui| {
-        ui.label(RichText::new(icon::SEARCH).font(super::super::theme::icons(14.0)).color(TEXT_DIM));
+        ui.label(RichText::new(icon::SEARCH).font(super::super::theme::icons(14.0)).color(text_dim()));
         ui.add(egui::TextEdit::singleline(&mut app.history_search).hint_text("Search dictations").desired_width(320.0));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if app.confirm_clear {
@@ -54,7 +54,7 @@ pub fn history(app: &mut SettingsApp, ui: &mut egui::Ui) {
         let expanded = app.expanded_entry == Some(i);
         w::card(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new(&e.time).size(12.5).color(TEXT_FAINT));
+                ui.label(RichText::new(&e.time).size(12.5).color(text_faint()));
                 if !e.app.is_empty() {
                     w::badge(ui, &e.app, accent2());
                 }
@@ -70,11 +70,11 @@ pub fn history(app: &mut SettingsApp, ui: &mut egui::Ui) {
                     }
                 });
             });
-            ui.add(egui::Label::new(RichText::new(&e.text).size(14.5).color(TEXT)).wrap());
+            ui.add(egui::Label::new(RichText::new(&e.text).size(14.5).color(text())).wrap());
             if expanded {
                 w::divider(ui);
-                ui.label(RichText::new("What you said").size(12.5).color(TEXT_FAINT));
-                ui.add(egui::Label::new(RichText::new(&e.raw).size(13.5).color(TEXT_DIM)).wrap());
+                ui.label(RichText::new("What you said").size(12.5).color(text_faint()));
+                ui.add(egui::Label::new(RichText::new(&e.raw).size(13.5).color(text_dim())).wrap());
                 ui.label(
                     RichText::new(format!(
                         "{:.1} s of audio · processed in {:.2} s · {} · language: {}",
@@ -84,7 +84,7 @@ pub fn history(app: &mut SettingsApp, ui: &mut egui::Ui) {
                         e.language
                     ))
                     .size(12.0)
-                    .color(TEXT_FAINT),
+                    .color(text_faint()),
                 );
             }
         });
@@ -106,7 +106,7 @@ pub fn general(app: &mut SettingsApp, ui: &mut egui::Ui) {
     ui.add_space(12.0);
     w::card(ui, |ui| {
         w::card_title(ui, icon::INSERT, "Text insertion", "");
-        ui.label(RichText::new("Method").size(14.5).color(TEXT));
+        ui.label(RichText::new("Method").size(14.5).color(text()));
         w::segmented(ui, egui::Id::new("ins-method"), &mut app.draft.insertion.method, &[(InsertMethod::Paste, "Paste (recommended)"), (InsertMethod::Type, "Simulate typing")]);
         w::hint(ui, "Pasting is instant and works in editors, browsers, chat apps and terminals. Typing is slower but works where paste is blocked.");
         w::divider(ui);
@@ -134,7 +134,15 @@ pub fn privacy(app: &mut SettingsApp, ui: &mut egui::Ui) {
         w::card_title(ui, icon::SHIELD, "Data flow", "");
         for (ic, title, desc, local) in [
             (icon::MIC, "Microphone audio", "Captured only while you dictate, kept in memory, discarded after transcription.", true),
-            (icon::SPEECH, "Speech recognition", "Whisper runs on this computer.", true),
+            (
+                icon::SPEECH,
+                "Speech recognition",
+                match app.draft.transcription.provider {
+                    SttProvider::WhisperLocal => "Whisper runs on this computer.",
+                    SttProvider::Parakeet => "NVIDIA Parakeet runs on this computer.",
+                },
+                true,
+            ),
             (
                 icon::SPARKLE,
                 "Rewriting",
@@ -143,14 +151,14 @@ pub fn privacy(app: &mut SettingsApp, ui: &mut egui::Ui) {
             ),
         ] {
             ui.horizontal(|ui| {
-                ui.label(RichText::new(ic).font(super::super::theme::icons(16.0)).color(TEXT_DIM));
+                ui.label(RichText::new(ic).font(super::super::theme::icons(16.0)).color(text_dim()));
                 ui.vertical(|ui| {
                     ui.spacing_mut().item_spacing.y = 1.0;
-                    ui.label(RichText::new(title).size(14.5).color(TEXT));
-                    ui.label(RichText::new(desc).size(12.5).color(TEXT_DIM));
+                    ui.label(RichText::new(title).size(14.5).color(text()));
+                    ui.label(RichText::new(desc).size(12.5).color(text_dim()));
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if local { w::badge(ui, "On this PC", SUCCESS) } else { w::badge(ui, "Cloud", WARN) }
+                    if local { w::badge(ui, "On this PC", success()) } else { w::badge(ui, "Cloud", warn()) }
                 });
             });
             ui.add_space(4.0);
@@ -196,9 +204,9 @@ pub fn about(app: &mut SettingsApp, ui: &mut egui::Ui) {
                 ui.add(egui::Image::new(logo).fit_to_exact_size(vec2(72.0, 72.0)));
             }
             ui.vertical(|ui| {
-                ui.label(RichText::new("Audian").font(super::super::theme::semibold(30.0)).color(TEXT));
-                ui.label(RichText::new(format!("Version {}  ·  Voice dictation for Windows", audian_common::APP_VERSION)).size(14.0).color(TEXT_DIM));
-                ui.label(RichText::new("Speak naturally — get polished text wherever you type.").size(13.0).color(TEXT_FAINT));
+                ui.label(RichText::new("Audian").font(super::super::theme::semibold(30.0)).color(text()));
+                ui.label(RichText::new(format!("Version {}  ·  Voice dictation for Windows", audian_common::APP_VERSION)).size(14.0).color(text_dim()));
+                ui.label(RichText::new("Speak naturally — get polished text wherever you type.").size(13.0).color(text_faint()));
             });
         });
     });
@@ -214,12 +222,12 @@ pub fn about(app: &mut SettingsApp, ui: &mut egui::Ui) {
             ("History", paths::history_file()),
         ] {
             ui.horizontal(|ui| {
-                ui.add_sized(vec2(80.0, 20.0), egui::Label::new(RichText::new(label).size(14.0).color(TEXT)));
+                ui.add_sized(vec2(80.0, 20.0), egui::Label::new(RichText::new(label).size(14.0).color(text())));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if w::icon_button(ui, icon::FOLDER, "Open").clicked() {
                         super::super::open_path(&path);
                     }
-                    ui.add(egui::Label::new(RichText::new(super::display_path(&path)).size(12.0).color(TEXT_FAINT)).truncate())
+                    ui.add(egui::Label::new(RichText::new(super::display_path(&path)).size(12.0).color(text_faint())).truncate())
                         .on_hover_text(path.display().to_string());
                 });
             });
@@ -230,7 +238,7 @@ pub fn about(app: &mut SettingsApp, ui: &mut egui::Ui) {
         w::card_title(ui, icon::INFO, "Built with", "");
         w::hint(
             ui,
-            "whisper.cpp & llama.cpp (ggml, MIT) · OpenAI Whisper models (MIT) · Qwen models (Apache 2.0) · egui, tiny-skia, cpal and the windows crate. Audian is MIT licensed.",
+            "whisper.cpp & llama.cpp (ggml, MIT) · ONNX Runtime (MIT) · OpenAI Whisper models (MIT) · NVIDIA Parakeet TDT 0.6B v3 (CC-BY-4.0) · Qwen models (Apache 2.0) · egui, tiny-skia, cpal and the windows crate. Audian is MIT licensed.",
         );
     });
 }
